@@ -1,0 +1,22 @@
+# Build outputs
+main
+main_host
+*.o
+*.out
+
+# gem5 outputs
+m5out/
+part1/m5out/
+part2/m5out/
+part1_kernel_only/m5out/
+part2_kernel_only/m5out/
+
+# Local generated stats or temp files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# OS / editor files
+.DS_Store
+Thumbs.db
