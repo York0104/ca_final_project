@@ -1,0 +1,22 @@
+Part 5 - Multi-pattern CUDA LS Channel Estimation + CUDA LMMSE Equalization
+NUM_PATTERNS                  = 32
+NUM_SUBCARRIERS              = 512
+NUM_PILOTS                   = 256
+NUM_DATA_SYMBOLS             = 512
+TOTAL_PILOT_ALL              = 4194304
+TOTAL_DATA_ALL               = 8388608
+NOISE_STD                    = 0.04040000
+NOISE_VAR                    = 0.00326432
+NOISE_VAR_OVER_SYMBOL_POWER  = 0.00163216
+H_MSE                        = 0.00001286
+MSE_RX_BEFORE_EQ             = 0.14224903
+MSE_LMMSE                    = 0.00674862
+Xmmse[0]                     = 1.01242745 + j1.08173227
+checksum                     = 18668.39257812
+guard                        = 18668.58593750
+TPB_LS                       = 256
+TPB_EQ                       = 256
+LS_KERNEL_MS                 = 0.141276
+LMMSE_KERNEL_MS              = 0.526899
+PIPELINE_KERNEL_MS           = 0.681580
+Verification                 = PASS

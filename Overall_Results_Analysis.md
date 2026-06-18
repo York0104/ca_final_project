@@ -16,9 +16,9 @@ LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 | `Part 2` | RVV reduction LS channel estimation | RVV LMMSE equalization |
 | `Part 3` | SIMD-like RVV LS channel estimation | RVV LMMSE equalization |
 
-這份表整理的是同一個 OFDM receiver workload 在 Part 1～3 的 gem5 結果，不包含 Part 4 的 CUDA kernel timing。
+這份表整理的是同一個 OFDM receiver workload 在 Part 1～3 的 gem5 結果，不包含 Part 4 與 Part 5 的 CUDA kernel timing。
 
-Part 4 已有 CUDA source、PTX、NCU 與 sweep 結果，但量測方式是 GPU kernel-only timing，和 gem5 simulated statistics 不同，所以另外放在 Part 4 文件。Part 5 仍未實作。
+Part 4 和 Part 5 都已實作，但量測方式是 GPU kernel-only timing，和 gem5 simulated statistics 不同，所以分別放在各自的 CUDA 文件。
 
 ---
 

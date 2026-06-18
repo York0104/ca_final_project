@@ -1,0 +1,15 @@
+Part 5 CPU Baseline - Multi-pattern LS Channel Estimation + Scalar LMMSE Equalization
+NUM_PATTERNS                  = 16
+NUM_SUBCARRIERS              = 512
+NUM_PILOTS                   = 256
+NUM_DATA_SYMBOLS             = 512
+TOTAL_PILOT_ALL              = 2097152
+TOTAL_DATA_ALL               = 4194304
+CPU_PIPELINE_MS              = 10.517579
+H_MSE                        = 0.00001289
+MSE_RX_BEFORE_EQ             = 0.14082038
+MSE_LMMSE                    = 0.00682142
+Xmmse[0]                     = 1.01242745 + j1.08173215
+checksum                     = 9294.76074219
+guard                        = 9294.94335938
+Verification                 = PASS

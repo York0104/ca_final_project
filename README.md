@@ -19,9 +19,6 @@ Currently implemented:
 - `Part 2` — RVV vector reduction
 - `Part 3` — SIMD-like RVV parallelization
 - `Part 4` — CUDA SIMT single-pattern implementation
-
-Prepared but not yet implemented:
-
 - `Part 5` — Multi-pattern GPU parallelism
 
 ## Repository Structure
@@ -34,7 +31,7 @@ part1/       Scalar baseline
 part2/       RVV reduction implementation
 part3/       SIMD-like RVV implementation
 part4/       CUDA SIMT implementation and experiment scripts
-part5/       CUDA work directory placeholder
+part5/       Multi-pattern CUDA implementation and experiment scripts
 reference/   Course references and PDFs
 docs/        Audit / supplementary notes
 report.md    Report draft content
@@ -112,6 +109,29 @@ Each `make` run:
 - runs gem5 with `TimingSimpleCPU`
 - prints key stats from `m5out/stats.txt`
 
+### Part 4
+
+```bash
+cd part4
+make
+make run
+```
+
+### Part 5
+
+```bash
+cd part5
+make
+make run
+```
+
+Optional CPU baseline:
+
+```bash
+cd part5
+make run_cpu
+```
+
 ## gem5 Results
 
 | Metric | Part 1 | Part 2 | Part 3 |
@@ -154,7 +174,7 @@ The shared validation checks:
 
 ### CUDA
 
-The CUDA environment is already usable for `Part 4`, and the same setup will be reused for `Part 5`:
+The CUDA environment is already being used for `Part 4` and `Part 5`:
 
 - GPU: `NVIDIA GeForce RTX 3060`
 - Compute Capability: `8.6`
@@ -174,4 +194,4 @@ Note:
 - The project container uses `CUDA Toolkit 12.4.1`
 - This combination is working correctly in the current environment
 
-No extra CUDA setup is needed before continuing with `Part 4` or starting `Part 5`.
+No extra CUDA setup is needed before running `Part 4` or `Part 5`.

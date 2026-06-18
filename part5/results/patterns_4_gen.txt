@@ -1,0 +1,6 @@
+Generated multi-pattern OFDM input: ../data/ofdm_input_multi_4.bin
+NUM_PATTERNS    = 4
+NUM_SUBCARRIERS = 512
+NUM_PILOTS      = 256
+NUM_DATA_SYMBOLS= 512
+NOISE_STD       = 0.04040000

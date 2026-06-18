@@ -146,7 +146,7 @@ Y_{\mathrm{data}}[s,k] \cdot \hat{H}^{*}[k]
 
 本專題使用 Docker 建立可重現的 Linux development environment，使用 `riscv64-linux-gnu-g++` 進行 RISC-V cross-compilation，並以 gem5 模擬 scalar RISC-V 與 RVV execution。課程資料說明 gem5 可用於 architecture research，能量測 timing、instruction details 與 memory-system behavior，並支援 scalar RISC-V 與 RISC-V Vector Extension workloads。
 
-另外，CUDA 開發環境已完成驗證。主機端可使用 `NVIDIA GeForce RTX 3060`，Compute Capability 為 `8.6`；Docker GPU runtime 可正常使用，container 內已確認 `nvcc 12.4`、`-arch=sm_86` 編譯、CUDA kernel launch、CUDA event timing、PTX generation、PTXAS resource report、`Nsight Compute (ncu)` 與 GPU performance counters 皆可正常運作。主機驅動顯示的 `CUDA Version` 為 `13.0`，而作業 container 內工具鏈為 `CUDA Toolkit 12.4.1`；目前這組合已透過 `cuda_smoke` 與 `ncu` 驗證可用。Part 4 可直接使用這套環境，Part 5 目錄也已預先建立，但程式尚未實作。
+另外，CUDA 開發環境已完成驗證。主機端可使用 `NVIDIA GeForce RTX 3060`，Compute Capability 為 `8.6`；Docker GPU runtime 可正常使用，container 內已確認 `nvcc 12.4`、`-arch=sm_86` 編譯、CUDA kernel launch、CUDA event timing、PTX generation、PTXAS resource report、`Nsight Compute (ncu)` 與 GPU performance counters 皆可正常運作。主機驅動顯示的 `CUDA Version` 為 `13.0`，而作業 container 內工具鏈為 `CUDA Toolkit 12.4.1`；目前這組合已透過 `cuda_smoke` 與 `ncu` 驗證可用。Part 4 與 Part 5 都可直接使用這套環境。
 
 Part 1 的 scalar program 編譯方式為：
 

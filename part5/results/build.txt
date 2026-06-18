@@ -1,0 +1,21 @@
+rm -f main main_cpu generate_ofdm_multi main.ptx
+g++ -O2 -std=c++17 generate_ofdm_multi.cpp -o generate_ofdm_multi
+mkdir -p ../data
+./generate_ofdm_multi ../data/ofdm_input_multi.bin 16
+Generated multi-pattern OFDM input: ../data/ofdm_input_multi.bin
+NUM_PATTERNS    = 16
+NUM_SUBCARRIERS = 512
+NUM_PILOTS      = 256
+NUM_DATA_SYMBOLS= 512
+NOISE_STD       = 0.04040000
+nvcc -O2 -std=c++17 -arch=sm_86 -lineinfo -Xptxas -v -DPART5_TPB_LS=256 -DPART5_TPB_EQ=256 main.cu -o main
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_Z31lmmse_equalization_multi_kernelPKfS0_S0_S0_PfS1_' for 'sm_86'
+ptxas info    : Function properties for _Z31lmmse_equalization_multi_kernelPKfS0_S0_S0_PfS1_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 21 registers, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34ls_channel_estimation_multi_kernelPKfS0_S0_PfS1_' for 'sm_86'
+ptxas info    : Function properties for _Z34ls_channel_estimation_multi_kernelPKfS0_S0_PfS1_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 15 registers, 392 bytes cmem[0]
+g++ -O2 -std=c++17 main_cpu.cpp -o main_cpu
