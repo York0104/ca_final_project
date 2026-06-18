@@ -1,0 +1,23 @@
+rm -f main main.ptx ../data_gen/generate_ofdm_data
+g++ -O2 -std=c++11 ../data_gen/generate_ofdm_data.cpp -o ../data_gen/generate_ofdm_data
+mkdir -p ../data
+../data_gen/generate_ofdm_data ../data/ofdm_input.bin
+Generated OFDM input: ../data/ofdm_input.bin
+NUM_SUBCARRIERS = 512
+NUM_PILOTS      = 256
+NUM_DATA_SYMBOLS= 512
+NOISE_STD       = 0.04040000
+nvcc -O2 -std=c++17 -arch=sm_86 -lineinfo -Xptxas -v -DPART4_TPB_LS=256 -DPART4_TPB_EQ=128 main.cu -o main
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_Z25lmmse_equalization_kernelPKfS0_S0_S0_PfS1_' for 'sm_86'
+ptxas info    : Function properties for _Z25lmmse_equalization_kernelPKfS0_S0_S0_PfS1_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 21 registers, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z35ls_channel_estimation_serial_kernelPKfS0_S0_PfS1_' for 'sm_86'
+ptxas info    : Function properties for _Z35ls_channel_estimation_serial_kernelPKfS0_S0_PfS1_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 392 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z35ls_channel_estimation_shared_kernelPKfS0_S0_PfS1_' for 'sm_86'
+ptxas info    : Function properties for _Z35ls_channel_estimation_shared_kernelPKfS0_S0_PfS1_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 14 registers, 392 bytes cmem[0]

@@ -52,6 +52,7 @@ Hhat[k] = sum_p Y_pilot[p,k] * w[p]
 - 不使用 vector reduction
 - 每個 vector lane 對應不同的輸出 subcarrier `k`
 - 對固定的 pilot index `p`，同時更新多個 `Hhat[k]`
+- 每一組實際處理的 lane 數量由 `vsetvli` 在執行時決定；在目前 gem5 的 `VLEN=256`、`SEW=32` 設定下，最多同時處理 8 個 FP32 lane
 - 由於 layout 採用 `pilot_index(k, p) = k * NUM_PILOTS + p`
   ，所以 across-`k` 的存取需要 strided load
 
@@ -140,47 +141,48 @@ LS channel estimation + LMMSE equalization acceleration
 | `MSE_RX_BEFORE_EQ` | `0.14093372` |
 | `MSE_LMMSE` | `0.00681053` |
 | `Xmmse[0]` | `1.01242745 + j1.08173215` |
-| `checksum` | `584.37121582` |
+| `checksum` | `584.37115479` |
 | `Verification` | `PASS` |
 
-Part 3 與 Part 1 的 correctness 幾乎一致。
+Part 3 與 Part 1 / Part 2 的 correctness 幾乎一致。`objdump` 可見 `vlse32.v`，且未出現 `vfredusum.vs` 或其他 vector reduction instruction。
 
 ### gem5 stats
 
 | Metric | Part 3 SIMD-like RVV |
 | --- | --- |
-| `simSeconds` | `0.069027` |
-| `simTicks` | `69,026,698,000` |
-| `hostSeconds` | `25.15` |
-| `simInsts` | `17,065,386` |
-| `simOps` | `17,065,422` |
-| `numCycles` | `138,053,396` |
-| `CPI` | `8.089658` |
-| `IPC` | `0.123615` |
-| `D-cache misses` | `560,238` |
-| `D-cache miss rate` | `0.114750` |
-| `I-cache misses` | `917` |
-| `I-cache miss rate` | `0.000046` |
+| `simSeconds` | `0.072715` |
+| `simTicks` | `72,715,062,000` |
+| `hostSeconds` | `26.86` |
+| `simInsts` | `11,208,742` |
+| `simOps` | `11,438,155` |
+| `numCycles` | `145,430,124` |
+| `CPI` | `12.974667` |
+| `IPC` | `0.077073` |
+| `D-cache misses` | `790,640` |
+| `D-cache miss rate` | `0.229839` |
+| `I-cache misses` | `907` |
+| `I-cache miss rate` | `0.000051` |
 
 ### 與 Part 1 / Part 2 比較
 
 | Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.074767` | `0.067096` | `0.069027` |
-| `simInsts` | `17,065,752` | `16,444,742` | `17,065,386` |
-| `numCycles` | `149,534,050` | `134,192,468` | `138,053,396` |
-| `CPI` | `8.762213` | `8.160189` | `8.089658` |
-| `IPC` | `0.114126` | `0.122546` | `0.123615` |
-| `D-cache miss rate` | `0.114747` | `0.120403` | `0.114750` |
-| `I-cache miss rate` | `0.000034` | `0.000048` | `0.000046` |
+| `simSeconds` | `0.069028` | `0.054827` | `0.072715` |
+| `simInsts` | `17,066,142` | `11,395,259` | `11,208,742` |
+| `numCycles` | `138,056,924` | `109,653,580` | `145,430,124` |
+| `CPI` | `8.089506` | `9.622709` | `12.974667` |
+| `IPC` | `0.123617` | `0.103921` | `0.077073` |
+| `D-cache miss rate` | `0.114745` | `0.170969` | `0.229839` |
+| `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
 
 初步解讀：
 
-- Part 3 重新執行後，已經明顯優於 Part 1，但仍略慢於 Part 2
-- 相較 Part 1，Part 3 的 `simSeconds` 與 `numCycles` 約下降 `7.7%`
-- 相較 Part 2，Part 3 的 `simSeconds` 與 `numCycles` 約增加約 `2.9%`
+- Part 3 在目前設計下慢於 Part 2，也略慢於 Part 1
+- 相較 Part 1，Part 3 的 `simSeconds` 約增加 `5.34%`
+- 相較 Part 2，Part 3 的 `simSeconds` 約增加 `32.63%`
 - 更合理的原因是 Stage 1 使用 `vlse32.v` 進行 strided memory access，跨 `k` 的 stride 為 `NUM_PILOTS * sizeof(float)`，spatial locality 較差
-- 較差的 spatial locality 會削弱 SIMD-like RVV 帶來的理論平行化收益
+- 較差的 spatial locality 會大幅提高 D-cache miss rate，並把 CPI 推高到 `12.97`
+- 因此即使 Part 3 的 instruction count 低於 Part 1，最終 cycles 與 simulated time 仍沒有優勢
 - 相較之下，Part 2 的 RVV reduction + RVV LMMSE equalization 目前最有效
 
 ---

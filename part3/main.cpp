@@ -15,7 +15,7 @@
 //   stride NUM_PILOTS across k.
 // ============================================================
 static void estimate_channel_ls_average_rvv_simd_like(){
-#if defined(__riscv) && defined(__riscv_vector)
+#if OFDM_HAS_RVV
     const ptrdiff_t pilot_stride_bytes = static_cast<ptrdiff_t>(NUM_PILOTS * sizeof(float));
 
     for (int p = 0; p < NUM_PILOTS; ++p)
@@ -46,7 +46,7 @@ static void estimate_channel_ls_average_rvv_simd_like(){
                 "vfadd.vv v4, v4, v7\n\t"
                 "vse32.v v3, (%[hr])\n\t"
                 "vse32.v v4, (%[hi])\n\t"
-                : [vl] "=r"(vl)
+                : [vl] "=&r"(vl)
                 : [remaining] "r"(remaining),
                   [yr] "r"(yr_ptr),
                   [yi] "r"(yi_ptr),
@@ -86,7 +86,7 @@ static void estimate_channel_ls_average_rvv_simd_like(){
 //   Same element-wise RVV equalizer as Part 2.
 // ============================================================
 static void equalize_lmmse_rvv(){
-#if defined(__riscv) && defined(__riscv_vector)
+#if OFDM_HAS_RVV
     const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
 
     for (int s = 0; s < NUM_DATA_SYMBOLS; ++s)
@@ -124,7 +124,7 @@ static void equalize_lmmse_rvv(){
                 "vfdiv.vv v6, v6, v8\n\t"
                 "vse32.v v5, (%[xr])\n\t"
                 "vse32.v v6, (%[xi])\n\t"
-                : [vl] "=r"(vl)
+                : [vl] "=&r"(vl)
                 : [remaining] "r"(remaining),
                   [yr] "r"(yr_ptr),
                   [yi] "r"(yi_ptr),

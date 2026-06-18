@@ -59,6 +59,11 @@ static inline float checksum_lmmse_results(){
 }
 
 static inline void print_lmmse_results(const char *title, float h_mse, float mse_rx_before_eq, float mse_lmmse, float checksum){
+    int verification_pass =
+        (mse_lmmse < mse_rx_before_eq) &&
+        (h_mse < 0.01f) &&
+        (abs_float(checksum) > 1.0e-6f);
+
     printf("%s\n", title);
     printf("NUM_SUBCARRIERS              = %d\n", NUM_SUBCARRIERS);
     printf("NUM_PILOTS                   = %d\n", NUM_PILOTS);
@@ -79,7 +84,7 @@ static inline void print_lmmse_results(const char *title, float h_mse, float mse
 
     printf("checksum                     = %.8f\n", static_cast<double>(checksum));
     printf("guard                        = %.8f\n", static_cast<double>(g_sink));
-
+    printf("Verification                 = %s\n", verification_pass ? "PASS" : "FAIL");
 }
 
 #endif

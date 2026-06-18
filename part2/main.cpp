@@ -41,7 +41,7 @@ static inline float rvv_dot_product_reduction_f32(const float *a,
             "vfredusum.vs v4, v3, v0\n\t"
             "vfmv.f.s ft0, v4\n\t"
             "fsw ft0, (%[partial])\n\t"
-            : [vl] "=r"(vl)
+            : [vl] "=&r"(vl)
             : [a] "r"(a),
               [b] "r"(b),
               [remaining] "r"(remaining),
@@ -77,7 +77,7 @@ static void estimate_channel_ls_average_rvv_reduction(){
 //   No reduction is needed because each lane produces one Xmmse[s][k].
 // ============================================================
 static void equalize_lmmse_rvv(){
-#if defined(__riscv) && defined(__riscv_vector)
+#if OFDM_HAS_RVV
     const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
 
     for (int s = 0; s < NUM_DATA_SYMBOLS; ++s)
@@ -115,7 +115,7 @@ static void equalize_lmmse_rvv(){
                 "vfdiv.vv v6, v6, v8\n\t"
                 "vse32.v v5, (%[xr])\n\t"
                 "vse32.v v6, (%[xi])\n\t"
-                : [vl] "=r"(vl)
+                : [vl] "=&r"(vl)
                 : [remaining] "r"(remaining),
                   [yr] "r"(yr_ptr),
                   [yi] "r"(yi_ptr),

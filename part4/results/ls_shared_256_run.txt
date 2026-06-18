@@ -1,0 +1,23 @@
+Part 4 - CUDA SIMT LS Channel Estimation + CUDA LMMSE Equalization
+NUM_SUBCARRIERS              = 512
+NUM_PILOTS                   = 256
+NUM_DATA_SYMBOLS             = 512
+TOTAL_DATA                   = 262144
+NOISE_STD                    = 0.04040000
+NOISE_VAR                    = 0.00326432
+NOISE_VAR_OVER_SYMBOL_POWER  = 0.00163216
+H_MSE                        = 0.00001250
+MSE_RX_BEFORE_EQ             = 0.14093372
+MSE_LMMSE                    = 0.00681053
+Xmmse[0]                     = 1.01242745 + j1.08173227
+checksum                     = 584.37121582
+guard                        = 586.46594238
+Verification                 = PASS
+TPB_LS                       = 256
+TPB_EQ                       = 256
+LS_KERNEL_MODE               = shared
+WARMUP_ITERS                 = 20
+TIMED_ITERS                  = 1000
+LS_KERNEL_MS                 = 0.018781
+LMMSE_KERNEL_MS              = 0.022941
+PIPELINE_KERNEL_MS           = 0.052552

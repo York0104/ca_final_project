@@ -156,53 +156,50 @@ checksum != 0
 | `MSE_RX_BEFORE_EQ` | `0.14093372` |
 | `MSE_LMMSE` | `0.00681052` |
 | `Xmmse[0]` | `1.01242721 + j1.08173215` |
-| `checksum` | `584.37023926` |
+| `checksum` | `584.37054443` |
 | `Verification` | `PASS` |
-| `__riscv_vector` | `enabled` |
-| `Stage1_RVV_inline_asm` | `yes` |
-| `Stage2_RVV_inline_asm` | `yes` |
 
 這表示：
 
 - RVV reduction LS channel estimation 與 scalar 版本維持相同正確性
 - RVV LMMSE equalization 也維持正確
 - checksum 僅有極小的 floating-point rounding 差異
-- Part 2 的兩個 computation stages 都確實進入 RVV inline assembly path
+- `objdump` 可見 `vfredusum.vs` 與 `vfdiv.vv / vse32.v`，表示兩個 stages 都確實使用 RVV 指令
 
 ### gem5 stats
 
 | Metric | Part 2 RVV |
 | --- | --- |
-| `simSeconds` | `0.067096` |
-| `simTicks` | `67,096,234,000` |
-| `hostSeconds` | `20.99` |
-| `simInsts` | `16,444,742` |
-| `simOps` | `16,444,779` |
-| `numCycles` | `134,192,468` |
-| `CPI` | `8.160189` |
-| `IPC` | `0.122546` |
-| `D-cache misses` | `560,240` |
-| `D-cache miss rate` | `0.120403` |
-| `I-cache misses` | `926` |
-| `I-cache miss rate` | `0.000048` |
+| `simSeconds` | `0.054827` |
+| `simTicks` | `54,826,790,000` |
+| `hostSeconds` | `22.91` |
+| `simInsts` | `11,395,259` |
+| `simOps` | `11,395,296` |
+| `numCycles` | `109,653,580` |
+| `CPI` | `9.622709` |
+| `IPC` | `0.103921` |
+| `D-cache misses` | `560,245` |
+| `D-cache miss rate` | `0.170969` |
+| `I-cache misses` | `928` |
+| `I-cache miss rate` | `0.000071` |
 
 ### 與 Part 1 比較
 
 | Metric | Part 1 Scalar | Part 2 RVV | Change |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.074767` | `0.067096` | `-10.26%` |
-| `simInsts` | `17,065,752` | `16,444,742` | `-3.64%` |
-| `numCycles` | `149,534,050` | `134,192,468` | `-10.26%` |
-| `CPI` | `8.762213` | `8.160189` | `-6.87%` |
-| `IPC` | `0.114126` | `0.122546` | `+7.38%` |
-| `D-cache miss rate` | `0.114747` | `0.120403` | `+4.93%` |
-| `I-cache miss rate` | `0.000034` | `0.000048` | `+41.18%` |
+| `simSeconds` | `0.069028` | `0.054827` | `-20.57%` |
+| `simInsts` | `17,066,142` | `11,395,259` | `-33.23%` |
+| `numCycles` | `138,056,924` | `109,653,580` | `-20.57%` |
+| `CPI` | `8.089506` | `9.622709` | `+18.95%` |
+| `IPC` | `0.123617` | `0.103921` | `-15.93%` |
+| `D-cache miss rate` | `0.114745` | `0.170969` | `+48.95%` |
+| `I-cache miss rate` | `0.000046` | `0.000071` | `+54.35%` |
 
 初步解讀：
 
 - Part 2 在正式 workload 下優於 Part 1
 - Stage 1 的 RVV reduction 與 Stage 2 的 RVV LMMSE equalization 一起帶來整體加速
-- 雖然 cache miss rate 略高，但 instruction count、cycles 與 simulated time 仍下降
+- 雖然 CPI 與 cache miss rate 上升，但 instruction count 大幅下降，因此總 cycles 與 simulated time 仍明顯改善
 
 ---
 

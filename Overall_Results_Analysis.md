@@ -18,6 +18,8 @@ LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 
 這代表目前的正式 workload 是一個簡化但完整的 OFDM receiver pipeline，而不是單一 dot product benchmark。
 
+目前實作進度只到 `Part 1 ~ Part 3`。`Part 4` 與 `Part 5` 尚未實作，不納入本結果分析。
+
 ---
 
 ## 共同數學模型
@@ -96,13 +98,13 @@ checksum != 0
 
 | Metric | Part 1 Scalar |
 | --- | --- |
-| `simSeconds` | `0.074767` |
-| `simInsts` | `17,065,752` |
-| `numCycles` | `149,534,050` |
-| `CPI` | `8.762213` |
-| `IPC` | `0.114126` |
-| `D-cache miss rate` | `0.114747` |
-| `I-cache miss rate` | `0.000034` |
+| `simSeconds` | `0.069028` |
+| `simInsts` | `17,066,142` |
+| `numCycles` | `138,056,924` |
+| `CPI` | `8.089506` |
+| `IPC` | `0.123617` |
+| `D-cache miss rate` | `0.114745` |
+| `I-cache miss rate` | `0.000046` |
 
 Part 1 已可作為正式 baseline。
 
@@ -123,13 +125,13 @@ Part 1 已可作為正式 baseline。
 
 | Metric | Part 2 RVV |
 | --- | --- |
-| `simSeconds` | `0.067096` |
-| `simInsts` | `16,444,742` |
-| `numCycles` | `134,192,468` |
-| `CPI` | `8.160189` |
-| `IPC` | `0.122546` |
-| `D-cache miss rate` | `0.120403` |
-| `I-cache miss rate` | `0.000048` |
+| `simSeconds` | `0.054827` |
+| `simInsts` | `11,395,259` |
+| `numCycles` | `109,653,580` |
+| `CPI` | `9.622709` |
+| `IPC` | `0.103921` |
+| `D-cache miss rate` | `0.170969` |
+| `I-cache miss rate` | `0.000071` |
 
 ## Part 3 結果
 
@@ -146,13 +148,13 @@ Part 1 已可作為正式 baseline。
 
 | Metric | Part 3 SIMD-like RVV |
 | --- | --- |
-| `simSeconds` | `0.069027` |
-| `simInsts` | `17,065,386` |
-| `numCycles` | `138,053,396` |
-| `CPI` | `8.089658` |
-| `IPC` | `0.123615` |
-| `D-cache miss rate` | `0.114750` |
-| `I-cache miss rate` | `0.000046` |
+| `simSeconds` | `0.072715` |
+| `simInsts` | `11,208,742` |
+| `numCycles` | `145,430,124` |
+| `CPI` | `12.974667` |
+| `IPC` | `0.077073` |
+| `D-cache miss rate` | `0.229839` |
+| `I-cache miss rate` | `0.000051` |
 
 ---
 
@@ -170,29 +172,34 @@ Part 1 已可作為正式 baseline。
 
 | Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.074767` | `0.067096` | `0.069027` |
-| `simInsts` | `17,065,752` | `16,444,742` | `17,065,386` |
-| `numCycles` | `149,534,050` | `134,192,468` | `138,053,396` |
-| `CPI` | `8.762213` | `8.160189` | `8.089658` |
-| `IPC` | `0.114126` | `0.122546` | `0.123615` |
-| `D-cache miss rate` | `0.114747` | `0.120403` | `0.114750` |
-| `I-cache miss rate` | `0.000034` | `0.000048` | `0.000046` |
+| `simSeconds` | `0.069028` | `0.054827` | `0.072715` |
+| `simInsts` | `17,066,142` | `11,395,259` | `11,208,742` |
+| `numCycles` | `138,056,924` | `109,653,580` | `145,430,124` |
+| `CPI` | `8.089506` | `9.622709` | `12.974667` |
+| `IPC` | `0.123617` | `0.103921` | `0.077073` |
+| `D-cache miss rate` | `0.114745` | `0.170969` | `0.229839` |
+| `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
 
 ## 初步分析
 
 - Part 2 相較 Part 1 有明顯改善：
-  - `simSeconds` 約下降 `10.26%`
-  - `numCycles` 約下降 `10.26%`
-  - `simInsts` 約下降 `3.64%`
-  - `IPC` 上升
+  - `simSeconds` 約下降 `20.57%`
+  - `numCycles` 約下降 `20.57%`
+  - `simInsts` 約下降 `33.23%`
 
-- Part 3 相較 Part 1 也有改善：
-  - `simSeconds` 約下降 `7.68%`
-  - `numCycles` 約下降 `7.68%`
-  - `simInsts` 幾乎持平
-  - `IPC` 明顯上升
+- Part 2 的 CPI 與 cache miss rate 雖然變差，但總指令數下降更多，因此整體仍最快。
 
-- Part 3 仍略慢於 Part 2。這表示 SIMD-like RVV 確實有效，但 Stage 1 的 `vlse32.v` strided memory access 與較差的 spatial locality，會抵消一部分理論上的平行化收益。
+- Part 3 相較 Part 1 並沒有帶來速度優勢：
+  - `simSeconds` 約增加 `5.34%`
+  - `numCycles` 約增加 `5.34%`
+  - `D-cache miss rate` 明顯升高到 `0.229839`
+
+- Part 3 慢於 Part 2 的主要原因，是 Stage 1 使用 `vlse32.v` 做 strided memory access。這種 across-`k` 的存取模式 spatial locality 較差，會把 CPI 與 cache miss rate 明顯推高。
+
+- 反組譯檢查也支持上述結果：
+  - Part 2 binary 可見 `vfredusum.vs`
+  - Part 3 binary 可見 `vlse32.v`
+  - Part 3 binary 不含 vector reduction instruction
 
 - 因此目前可以先得出：
 

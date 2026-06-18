@@ -221,13 +221,13 @@ checksum != 0
 
 | Metric | Part 1 Scalar |
 | --- | --- |
-| `simSeconds` | `0.074767` |
-| `simInsts` | `17,065,752` |
-| `numCycles` | `149,534,050` |
-| `CPI` | `8.762213` |
-| `IPC` | `0.114126` |
-| `D-cache miss rate` | `0.114747` |
-| `I-cache miss rate` | `0.000034` |
+| `simSeconds` | `0.069028` |
+| `simInsts` | `17,066,142` |
+| `numCycles` | `138,056,924` |
+| `CPI` | `8.089506` |
+| `IPC` | `0.123617` |
+| `D-cache miss rate` | `0.114745` |
+| `I-cache miss rate` | `0.000046` |
 
 ---
 

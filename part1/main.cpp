@@ -91,6 +91,8 @@ int main(){
 
     // Force the results  be used
     float checksum = checksum_lmmse_results();
+    g_sink = h_mse + mse_rx_before_eq + mse_lmmse + checksum +
+             Xmmse_r[0] + Xmmse_i[TOTAL_DATA - 1];
 
     print_lmmse_results("Part 1 - Scalar LS Channel Estimation + Scalar LMMSE Equalization",
                         h_mse,
