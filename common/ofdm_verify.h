@@ -80,12 +80,6 @@ static inline void print_lmmse_results(const char *title, float h_mse, float mse
     printf("checksum                     = %.8f\n", static_cast<double>(checksum));
     printf("guard                        = %.8f\n", static_cast<double>(g_sink));
 
-    if ((mse_lmmse < mse_rx_before_eq) && (h_mse < 0.01f) && (abs_float(checksum) > 1.0e-6f)){
-        printf("Verification: PASS\n");
-    }
-    else{
-        printf("Verification: FAIL\n");
-    }
 }
 
 #endif

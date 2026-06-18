@@ -11,6 +11,15 @@
 // CA mapping:
 //   Vector lanes cover different pilot observations p for the same k.
 //   vfredusum.vs is used to reduce vector lanes into one Hhat[k].
+
+
+// Hhat_r[k] = Σ_p Ypilot_r[k,p] * pilot_w[p]
+// Hhat_i[k] = Σ_p Ypilot_i[k,p] * pilot_w[p]
+// f(ai[1], bi[1]) + f(ai[2], bi[2]) + ... + f(ai[n], bi[n])
+
+// a[p] = Ypilot[k,p]
+// b[p] = pilot_w[p]
+// f(a,b) = a * b
 // ============================================================
 static inline float rvv_dot_product_reduction_f32(const float *a,
                                                   const float *b,

@@ -2,6 +2,8 @@ GEM5_DIR := /root/gem5
 GEM5 := $(GEM5_DIR)/build/RISCV/gem5.opt
 CONFIG := $(GEM5_DIR)/configs/deprecated/example/se.py
 
+# Part 3 contains RISC-V RVV inline assembly.
+# It must be compiled with riscv64-linux-gnu-g++ and executed in gem5.
 CC := riscv64-linux-gnu-g++
 CFLAGS := -static -O2 -std=c++11 -march=rv64gcv -mabi=lp64d
 HOST_CXX := g++
@@ -21,6 +23,9 @@ $(BIN): $(SRC)
 $(GEN_BIN): $(GEN_SRC)
 	$(HOST_CXX) $(HOST_CXXFLAGS) $< -o $@
 
+# Input generation is done on the host before gem5 simulation.
+# It prepares a shared binary input file and is not part of the
+# simulated workload measured in m5out/stats.txt.
 $(DATA_FILE): $(GEN_BIN)
 	mkdir -p ../data
 	$(GEN_BIN) $(DATA_FILE)

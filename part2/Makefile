@@ -23,6 +23,9 @@ $(BIN): $(SRC)
 $(GEN_BIN): $(GEN_SRC)
 	$(HOST_CXX) $(HOST_CXXFLAGS) $< -o $@
 
+# Input generation is done on the host before gem5 simulation.
+# It prepares a shared binary input file and is not part of the
+# simulated workload measured in m5out/stats.txt.
 $(DATA_FILE): $(GEN_BIN)
 	mkdir -p ../data
 	$(GEN_BIN) $(DATA_FILE)

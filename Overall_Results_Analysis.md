@@ -146,13 +146,13 @@ Part 1 已可作為正式 baseline。
 
 | Metric | Part 3 SIMD-like RVV |
 | --- | --- |
-| `simSeconds` | `0.074767` |
-| `simInsts` | `17,065,826` |
-| `numCycles` | `149,534,050` |
-| `CPI` | `8.762175` |
-| `IPC` | `0.114127` |
-| `D-cache miss rate` | `0.114747` |
-| `I-cache miss rate` | `0.000034` |
+| `simSeconds` | `0.069027` |
+| `simInsts` | `17,065,386` |
+| `numCycles` | `138,053,396` |
+| `CPI` | `8.089658` |
+| `IPC` | `0.123615` |
+| `D-cache miss rate` | `0.114750` |
+| `I-cache miss rate` | `0.000046` |
 
 ---
 
@@ -170,13 +170,13 @@ Part 1 已可作為正式 baseline。
 
 | Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.074767` | `0.067096` | `0.074767` |
-| `simInsts` | `17,065,752` | `16,444,742` | `17,065,826` |
-| `numCycles` | `149,534,050` | `134,192,468` | `149,534,050` |
-| `CPI` | `8.762213` | `8.160189` | `8.762175` |
-| `IPC` | `0.114126` | `0.122546` | `0.114127` |
-| `D-cache miss rate` | `0.114747` | `0.120403` | `0.114747` |
-| `I-cache miss rate` | `0.000034` | `0.000048` | `0.000034` |
+| `simSeconds` | `0.074767` | `0.067096` | `0.069027` |
+| `simInsts` | `17,065,752` | `16,444,742` | `17,065,386` |
+| `numCycles` | `149,534,050` | `134,192,468` | `138,053,396` |
+| `CPI` | `8.762213` | `8.160189` | `8.089658` |
+| `IPC` | `0.114126` | `0.122546` | `0.123615` |
+| `D-cache miss rate` | `0.114747` | `0.120403` | `0.114750` |
+| `I-cache miss rate` | `0.000034` | `0.000048` | `0.000046` |
 
 ## 初步分析
 
@@ -186,7 +186,13 @@ Part 1 已可作為正式 baseline。
   - `simInsts` 約下降 `3.64%`
   - `IPC` 上升
 
-- Part 3 目前與 Part 1 幾乎完全相同，表示這版 SIMD-like RVV channel estimation 尚未帶來有效的整體效能優勢。
+- Part 3 相較 Part 1 也有改善：
+  - `simSeconds` 約下降 `7.68%`
+  - `numCycles` 約下降 `7.68%`
+  - `simInsts` 幾乎持平
+  - `IPC` 明顯上升
+
+- Part 3 仍略慢於 Part 2。這表示 SIMD-like RVV 確實有效，但 Stage 1 的 `vlse32.v` strided memory access 與較差的 spatial locality，會抵消一部分理論上的平行化收益。
 
 - 因此目前可以先得出：
 

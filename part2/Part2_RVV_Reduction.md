@@ -158,12 +158,16 @@ checksum != 0
 | `Xmmse[0]` | `1.01242721 + j1.08173215` |
 | `checksum` | `584.37023926` |
 | `Verification` | `PASS` |
+| `__riscv_vector` | `enabled` |
+| `Stage1_RVV_inline_asm` | `yes` |
+| `Stage2_RVV_inline_asm` | `yes` |
 
 這表示：
 
 - RVV reduction LS channel estimation 與 scalar 版本維持相同正確性
 - RVV LMMSE equalization 也維持正確
 - checksum 僅有極小的 floating-point rounding 差異
+- Part 2 的兩個 computation stages 都確實進入 RVV inline assembly path
 
 ### gem5 stats
 

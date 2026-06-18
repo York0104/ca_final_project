@@ -149,35 +149,38 @@ Part 3 與 Part 1 的 correctness 幾乎一致。
 
 | Metric | Part 3 SIMD-like RVV |
 | --- | --- |
-| `simSeconds` | `0.074767` |
-| `simTicks` | `74,767,025,000` |
-| `hostSeconds` | `25.37` |
-| `simInsts` | `17,065,826` |
-| `simOps` | `17,065,863` |
-| `numCycles` | `149,534,050` |
-| `CPI` | `8.762175` |
-| `IPC` | `0.114127` |
-| `D-cache misses` | `560,239` |
-| `D-cache miss rate` | `0.114747` |
-| `I-cache misses` | `904` |
-| `I-cache miss rate` | `0.000034` |
+| `simSeconds` | `0.069027` |
+| `simTicks` | `69,026,698,000` |
+| `hostSeconds` | `25.15` |
+| `simInsts` | `17,065,386` |
+| `simOps` | `17,065,422` |
+| `numCycles` | `138,053,396` |
+| `CPI` | `8.089658` |
+| `IPC` | `0.123615` |
+| `D-cache misses` | `560,238` |
+| `D-cache miss rate` | `0.114750` |
+| `I-cache misses` | `917` |
+| `I-cache miss rate` | `0.000046` |
 
 ### 與 Part 1 / Part 2 比較
 
 | Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.074767` | `0.067096` | `0.074767` |
-| `simInsts` | `17,065,752` | `16,444,742` | `17,065,826` |
-| `numCycles` | `149,534,050` | `134,192,468` | `149,534,050` |
-| `CPI` | `8.762213` | `8.160189` | `8.762175` |
-| `IPC` | `0.114126` | `0.122546` | `0.114127` |
-| `D-cache miss rate` | `0.114747` | `0.120403` | `0.114747` |
-| `I-cache miss rate` | `0.000034` | `0.000048` | `0.000034` |
+| `simSeconds` | `0.074767` | `0.067096` | `0.069027` |
+| `simInsts` | `17,065,752` | `16,444,742` | `17,065,386` |
+| `numCycles` | `149,534,050` | `134,192,468` | `138,053,396` |
+| `CPI` | `8.762213` | `8.160189` | `8.089658` |
+| `IPC` | `0.114126` | `0.122546` | `0.123615` |
+| `D-cache miss rate` | `0.114747` | `0.120403` | `0.114750` |
+| `I-cache miss rate` | `0.000034` | `0.000048` | `0.000046` |
 
 初步解讀：
 
-- Part 3 目前與 Part 1 幾乎相同
-- 代表目前這版 SIMD-like RVV channel estimation 在 gem5 上尚未展現明顯優勢
+- Part 3 重新執行後，已經明顯優於 Part 1，但仍略慢於 Part 2
+- 相較 Part 1，Part 3 的 `simSeconds` 與 `numCycles` 約下降 `7.7%`
+- 相較 Part 2，Part 3 的 `simSeconds` 與 `numCycles` 約增加約 `2.9%`
+- 更合理的原因是 Stage 1 使用 `vlse32.v` 進行 strided memory access，跨 `k` 的 stride 為 `NUM_PILOTS * sizeof(float)`，spatial locality 較差
+- 較差的 spatial locality 會削弱 SIMD-like RVV 帶來的理論平行化收益
 - 相較之下，Part 2 的 RVV reduction + RVV LMMSE equalization 目前最有效
 
 ---

@@ -9,6 +9,7 @@ HOST_CXXFLAGS := -O2 -std=c++11
 
 SRC := main.cpp
 BIN := main
+HOST_BIN := main_host
 GEN_SRC := ../data_gen/generate_ofdm_data.cpp
 GEN_BIN := ../data_gen/generate_ofdm_data
 DATA_FILE := ../data/ofdm_input.bin
@@ -21,6 +22,9 @@ $(BIN): $(SRC)
 $(GEN_BIN): $(GEN_SRC)
 	$(HOST_CXX) $(HOST_CXXFLAGS) $< -o $@
 
+# Input generation is done on the host before gem5 simulation.
+# It prepares a shared binary input file and is not part of the
+# simulated workload measured in m5out/stats.txt.
 $(DATA_FILE): $(GEN_BIN)
 	mkdir -p ../data
 	$(GEN_BIN) $(DATA_FILE)
@@ -30,11 +34,11 @@ run: $(DATA_FILE) $(BIN)
 	grep -E "simSeconds|simTicks|numCycles|simInsts|simOps|hostSeconds|overallMisses|overallMissRate|system.cpu.cpi|system.cpu.ipc" m5out/stats.txt
 
 host: $(DATA_FILE)
-	g++ -O2 -std=c++11 $(SRC) -o main_host
-	./main_host
+	$(HOST_CXX) $(HOST_CXXFLAGS) $(SRC) -o $(HOST_BIN)
+	./$(HOST_BIN)
 
 clean:
-	rm -f $(BIN) main_host $(GEN_BIN)
+	rm -f $(BIN) $(HOST_BIN) $(GEN_BIN)
 	rm -rf m5out
 
 .PHONY: all run host clean

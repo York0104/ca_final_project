@@ -11,7 +11,7 @@
 //   pilot observations.
 //
 // Mathematical form:
-//   Hhat[k] = Σ_p Ypilot[k][p] / pilot_w[p]
+//   Hhat[k] = Σ_p Ypilot[k][p] * pilot_w[p]
 //
 // CA mapping:
 //   This is the required nested-loop reduction form:
