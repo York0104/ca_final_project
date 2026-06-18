@@ -225,3 +225,14 @@ Scalar LS Channel Estimation
 
 - Part 2：`RVV reduction LS + RVV LMMSE`
 - Part 3：`SIMD-like RVV LS + RVV LMMSE`
+
+目前依照新版正式結果來看：
+
+- Part 2 相較 Part 1 有明顯加速
+- Part 3 目前與 Part 1 幾乎相同
+
+因此 Part 1 的角色已可明確定義為：
+
+```text
+formal scalar baseline for all later RVV comparisons
+```

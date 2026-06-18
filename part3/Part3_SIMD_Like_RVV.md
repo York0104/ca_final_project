@@ -123,7 +123,55 @@ LS channel estimation + LMMSE equalization acceleration
 
 ## 結果紀錄
 
-由於本次架構與正式主題均已更新，Part 3 的正式 gem5 結果應以新版程式重跑後為準，再補進本文件與總分析表。
+### Correctness
+
+本次 Part 3 輸出：
+
+| Metric | Value |
+| --- | --- |
+| `H_MSE` | `0.00001250` |
+| `MSE_RX_BEFORE_EQ` | `0.14093372` |
+| `MSE_LMMSE` | `0.00694250` |
+| `Xmmse[0]` | `0.97359151 + j1.04023767` |
+| `checksum` | `584.51855469` |
+| `Verification` | `PASS` |
+
+Part 3 與 Part 1 的 correctness 幾乎一致。
+
+### gem5 stats
+
+| Metric | Part 3 SIMD-like RVV |
+| --- | --- |
+| `simSeconds` | `0.074766` |
+| `simTicks` | `74,765,580,000` |
+| `hostSeconds` | `24.81` |
+| `simInsts` | `17,063,365` |
+| `simOps` | `17,063,401` |
+| `numCycles` | `149,531,160` |
+| `CPI` | `8.763270` |
+| `IPC` | `0.114113` |
+| `D-cache misses` | `560,239` |
+| `D-cache miss rate` | `0.114764` |
+| `I-cache misses` | `924` |
+| `I-cache miss rate` | `0.000035` |
+
+### 與 Part 1 / Part 2 比較
+
+| Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
+| --- | --- | --- | --- |
+| `simSeconds` | `0.074765` | `0.067093` | `0.074766` |
+| `simInsts` | `17,063,351` | `16,442,183` | `17,063,365` |
+| `numCycles` | `149,530,538` | `134,185,122` | `149,531,160` |
+| `CPI` | `8.763241` | `8.161012` | `8.763270` |
+| `IPC` | `0.114113` | `0.122534` | `0.114113` |
+| `D-cache miss rate` | `0.114764` | `0.120423` | `0.114764` |
+| `I-cache miss rate` | `0.000035` | `0.000048` | `0.000035` |
+
+初步解讀：
+
+- Part 3 目前與 Part 1 幾乎相同
+- 代表目前這版 SIMD-like RVV channel estimation 在 gem5 上尚未展現明顯優勢
+- 相較之下，Part 2 的 RVV reduction + RVV LMMSE equalization 目前最有效
 
 ---
 

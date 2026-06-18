@@ -101,27 +101,51 @@ Part 1 已可作為正式 baseline。
 
 ---
 
-## Part 2 / Part 3 狀態
+## Part 2 結果
 
-由於本次專案已經重新整理成：
+### Correctness
 
-```text
-common/ + data_gen/ + part1/part2/part3/
-```
+| Metric | Value |
+| --- | --- |
+| `H_MSE` | `0.00001250` |
+| `MSE_RX_BEFORE_EQ` | `0.14093372` |
+| `MSE_LMMSE` | `0.00694250` |
+| `Verification` | `PASS` |
 
-且正式主題也從舊版設計收斂成：
+### gem5 stats
 
-```text
-LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
-```
+| Metric | Part 2 RVV |
+| --- | --- |
+| `simSeconds` | `0.067093` |
+| `simInsts` | `16,442,183` |
+| `numCycles` | `134,185,122` |
+| `CPI` | `8.161012` |
+| `IPC` | `0.122534` |
+| `D-cache miss rate` | `0.120423` |
+| `I-cache miss rate` | `0.000048` |
 
-因此舊版 Part 2、kernel-only、ZF comparison 的結果都不再代表目前正式設計。
+## Part 3 結果
 
-目前文件策略如下：
+### Correctness
 
-- 保留 Part 1 新版結果
-- 刪除舊的 kernel-only / ZF 導向分析
-- Part 2 / Part 3 等重跑後再記錄正式數據
+| Metric | Value |
+| --- | --- |
+| `H_MSE` | `0.00001250` |
+| `MSE_RX_BEFORE_EQ` | `0.14093372` |
+| `MSE_LMMSE` | `0.00694250` |
+| `Verification` | `PASS` |
+
+### gem5 stats
+
+| Metric | Part 3 SIMD-like RVV |
+| --- | --- |
+| `simSeconds` | `0.074766` |
+| `simInsts` | `17,063,365` |
+| `numCycles` | `149,531,160` |
+| `CPI` | `8.763270` |
+| `IPC` | `0.114113` |
+| `D-cache miss rate` | `0.114764` |
+| `I-cache miss rate` | `0.000035` |
 
 ---
 
@@ -131,5 +155,34 @@ LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 
 1. 專案正式主題已定義清楚。
 2. 程式結構已對齊成 `common + data_gen + part1 + part2 + part3`。
-3. Part 1 已完成 host 與 gem5 correctness / baseline。
-4. Part 2 與 Part 3 應以新設計重新執行，再補正式比較表。
+3. Part 1 / Part 2 / Part 3 都已在新版正式設計下完成執行。
+4. 三個 Part 的 correctness 均通過，`H_MSE` 與 `MSE_LMMSE` 基本一致。
+5. 目前最佳 performance 來自 Part 2。
+
+## 正式比較表
+
+| Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
+| --- | --- | --- | --- |
+| `simSeconds` | `0.074765` | `0.067093` | `0.074766` |
+| `simInsts` | `17,063,351` | `16,442,183` | `17,063,365` |
+| `numCycles` | `149,530,538` | `134,185,122` | `149,531,160` |
+| `CPI` | `8.763241` | `8.161012` | `8.763270` |
+| `IPC` | `0.114113` | `0.122534` | `0.114113` |
+| `D-cache miss rate` | `0.114764` | `0.120423` | `0.114764` |
+| `I-cache miss rate` | `0.000035` | `0.000048` | `0.000035` |
+
+## 初步分析
+
+- Part 2 相較 Part 1 有明顯改善：
+  - `simSeconds` 約下降 `10.26%`
+  - `numCycles` 約下降 `10.26%`
+  - `simInsts` 約下降 `3.64%`
+  - `IPC` 上升
+
+- Part 3 目前與 Part 1 幾乎完全相同，表示這版 SIMD-like RVV channel estimation 尚未帶來有效的整體效能優勢。
+
+- 因此目前可以先得出：
+
+```text
+Part 2 is the best-performing implementation under the current design.
+```

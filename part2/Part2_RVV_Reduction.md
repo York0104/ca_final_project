@@ -137,21 +137,59 @@ checksum != 0
 
 ## 結果紀錄
 
-由於本次專案架構已大幅重構成：
+### Correctness
 
-```text
-common/ + data_gen/ + part1/part2/part3/
-```
+本次 Part 2 輸出：
 
-且正式主題也已改成：
+| Metric | Value |
+| --- | --- |
+| `H_MSE` | `0.00001250` |
+| `MSE_RX_BEFORE_EQ` | `0.14093372` |
+| `MSE_LMMSE` | `0.00694250` |
+| `Xmmse[0]` | `0.97359133 + j1.04023778` |
+| `checksum` | `584.51806641` |
+| `Verification` | `PASS` |
 
-```text
-LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
-```
+這表示：
 
-因此舊版 Part 2 結果已不再代表目前正式設計。
+- RVV reduction LS channel estimation 與 scalar 版本維持相同正確性
+- RVV LMMSE equalization 也維持正確
+- checksum 僅有極小的 floating-point rounding 差異
 
-目前這份文件僅保留新的設計與實作說明；新的 Part 2 統計數據應以重跑後結果為準，再更新至本文件與總分析表。
+### gem5 stats
+
+| Metric | Part 2 RVV |
+| --- | --- |
+| `simSeconds` | `0.067093` |
+| `simTicks` | `67,092,561,000` |
+| `hostSeconds` | `20.20` |
+| `simInsts` | `16,442,183` |
+| `simOps` | `16,442,219` |
+| `numCycles` | `134,185,122` |
+| `CPI` | `8.161012` |
+| `IPC` | `0.122534` |
+| `D-cache misses` | `560,239` |
+| `D-cache miss rate` | `0.120423` |
+| `I-cache misses` | `926` |
+| `I-cache miss rate` | `0.000048` |
+
+### 與 Part 1 比較
+
+| Metric | Part 1 Scalar | Part 2 RVV | Change |
+| --- | --- | --- | --- |
+| `simSeconds` | `0.074765` | `0.067093` | `-10.26%` |
+| `simInsts` | `17,063,351` | `16,442,183` | `-3.64%` |
+| `numCycles` | `149,530,538` | `134,185,122` | `-10.26%` |
+| `CPI` | `8.763241` | `8.161012` | `-6.87%` |
+| `IPC` | `0.114113` | `0.122534` | `+7.38%` |
+| `D-cache miss rate` | `0.114764` | `0.120423` | `+4.93%` |
+| `I-cache miss rate` | `0.000035` | `0.000048` | `+37.14%` |
+
+初步解讀：
+
+- Part 2 在正式 workload 下優於 Part 1
+- Stage 1 的 RVV reduction 與 Stage 2 的 RVV LMMSE equalization 一起帶來整體加速
+- 雖然 cache miss rate 略高，但 instruction count、cycles 與 simulated time 仍下降
 
 ---
 
