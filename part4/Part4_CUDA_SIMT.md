@@ -17,9 +17,11 @@ Current scope:
 
 Part 5 is still reserved for multi-pattern GPU parallelism.
 
+At this stage, Part 4 already includes source code, build scripts, PTX/PTXAS materials, Nsight Compute output, TPB sweep logs, and a shared-vs-serial Stage 1 comparison.
+
 ## Requirement Mapping
 
-根據 [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)，Part 4 需要：
+According to [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf), Part 4 requires:
 
 - 使用 CUDA SIMT execution model
 - each thread computes one output task
@@ -29,9 +31,21 @@ Part 5 is still reserved for multi-pattern GPU parallelism.
 - 產生 PTX
 - 觀察 PTXAS 與 `ncu --set basic`
 
-The current source and result files provide evidence for each item above.
+The repository already contains evidence for each item above:
 
-## Kernel 設計
+| Requirement | Evidence in repo |
+| --- | --- |
+| CUDA SIMT implementation | [main.cu](/home/york/ca_final_project/part4/main.cu) |
+| each thread computes one output task | `lmmse_equalization_kernel()` |
+| `threadIdx.x / blockIdx.x / blockDim.x` mapping | Stage 1 and Stage 2 kernels in `main.cu` |
+| `__shared__` usage | `ls_channel_estimation_shared_kernel()` |
+| `-arch=sm_xx` build | [Makefile](/home/york/ca_final_project/part4/Makefile) with `-arch=sm_86` |
+| PTX generation | [results/main_shared_256_256.ptx](/home/york/ca_final_project/part4/results/main_shared_256_256.ptx) |
+| PTXAS output | `results/*_build.txt` |
+| `ncu --set basic` profiling | [results/ncu_shared_256_256.txt](/home/york/ca_final_project/part4/results/ncu_shared_256_256.txt) |
+| TPB analysis | [results/Part4_Experiment_Summary.md](/home/york/ca_final_project/part4/results/Part4_Experiment_Summary.md) |
+
+## Kernel Design
 
 ### Stage 1
 
@@ -41,7 +55,7 @@ The current source and result files provide evidence for each item above.
 - one thread -> one pilot partial contribution
 - block 內使用 `__shared__` 做 tree reduction
 
-數學形式：
+Stage 1 computes:
 
 ```text
 Hhat[k] = sum_p Ypilot[k,p] * pilot_w[p]
@@ -54,7 +68,7 @@ Hhat[k] = sum_p Ypilot[k,p] * pilot_w[p]
 - one thread -> one subcarrier `k`
 - thread 內用 scalar loop 跑完所有 `256` 個 pilots
 
-這是 Part 4 用來比較 `shared-memory reduction` 是否有效的 baseline。
+This is the baseline used for the shared-vs-serial Stage 1 comparison.
 
 ### Stage 2
 
@@ -68,9 +82,9 @@ idx = blockIdx.x * blockDim.x + threadIdx.x
 k   = idx % NUM_SUBCARRIERS
 ```
 
-這段主要是 element-wise global-memory workload，不強制使用 shared memory。
+This stage is primarily an element-wise global-memory workload, so the current implementation does not force shared memory into it.
 
-## 編譯與分析
+## Build and Analysis
 
 主要檔案：
 
@@ -101,13 +115,13 @@ make profile
 
 ## Correctness
 
-目前 Part 4 與 Parts 1–3 使用相同的驗證標準：
+Part 4 uses the same verification policy as Parts 1–3:
 
 - `H_MSE < 0.01`
 - `MSE_LMMSE < MSE_RX_BEFORE_EQ`
 - `checksum != 0`
 
-目前 shared 與 serial 兩種 LS 模式都已驗證：
+Both LS modes already pass:
 
 ```text
 Verification = PASS
@@ -130,7 +144,7 @@ Verification = PASS
   - `0 spill stores`
   - `0 spill loads`
 
-The shared kernel uses fewer registers than the serial Stage 1 baseline in this build.
+In this build, the shared Stage 1 kernel uses fewer registers than the serial baseline.
 
 ## PTX Evidence
 
@@ -148,7 +162,9 @@ The shared kernel uses fewer registers than the serial Stage 1 baseline in this 
   - `st.global`
   - FP multiply / add / divide
 
-- Stage 1 PTX shows shared-memory traffic and barriers.
+Interpretation:
+
+- Stage 1 PTX shows shared-memory traffic and synchronization.
 - Stage 2 PTX is dominated by global-memory access and floating-point arithmetic.
 
 ## Nsight Compute Evidence
@@ -157,7 +173,7 @@ The shared kernel uses fewer registers than the serial Stage 1 baseline in this 
 
 - [part4/results/ncu_shared_256_256.txt](/home/york/ca_final_project/part4/results/ncu_shared_256_256.txt)
 
-The file below was collected with `TPB_LS=256`, `TPB_EQ=256`, and `shared` LS mode:
+This profile was collected with `TPB_LS=256`, `TPB_EQ=256`, and `shared` LS mode:
 
 ### LS shared kernel
 
@@ -201,7 +217,7 @@ Interpretation:
 | `ls_shared_128` | `128` | `256` | `shared` | `0.017576` | `0.038370` |
 | `ls_shared_256` | `256` | `256` | `shared` | `0.018781` | `0.052552` |
 
-In this sweep, `TPB_LS=128` gives the lowest pipeline kernel time.
+In this sweep, `TPB_LS=128` gives the lowest measured pipeline kernel-only time.
 
 ### LMMSE kernel sweep
 
@@ -211,7 +227,7 @@ In this sweep, `TPB_LS=128` gives the lowest pipeline kernel time.
 | `eq_shared_256` | `256` | `256` | `shared` | `0.037985` | `0.069458` |
 | `eq_shared_512` | `256` | `512` | `shared` | `0.021407` | `0.043108` |
 
-In this sweep, `TPB_EQ=512` gives the lowest pipeline kernel time.
+In this sweep, `TPB_EQ=512` gives the lowest measured pipeline kernel-only time.
 
 ## Shared vs Serial
 
@@ -226,7 +242,7 @@ In this sweep, `TPB_EQ=512` gives the lowest pipeline kernel time.
 - The serial version is a one-thread-per-subcarrier baseline.
 - The timing gap measures the combined effect of the parallel reduction mapping and shared-memory cooperation. It should not be reduced to "shared memory alone."
 
-## Current State
+## Submission Status
 
 Completed in the current repository:
 
@@ -237,10 +253,10 @@ Completed in the current repository:
 - cudaEvent timing
 - TPB sweep
 - shared vs serial LS comparison
-- PTXAS / PTX / NCU 初步分析材料
+- PTXAS / PTX / NCU evidence
 
-Still left for later work:
+Items still left for later work:
 
-- 更完整的 TPB search
-- 更完整的 NCU 報告整理
+- broader TPB exploration
+- a more polished NCU write-up
 - Part 5 multi-pattern 2D grid mapping

@@ -15,6 +15,14 @@ This part processes a single OFDM input pattern from:
 
 It does not implement the multi-pattern batching used later in Part 5.
 
+This directory is meant to be self-contained for the single-pattern CUDA submission:
+
+- source: [main.cu](/home/york/ca_final_project/part4/main.cu)
+- build script: [Makefile](/home/york/ca_final_project/part4/Makefile)
+- experiment script: [run_experiments.sh](/home/york/ca_final_project/part4/run_experiments.sh)
+- report note: [Part4_CUDA_SIMT.md](/home/york/ca_final_project/part4/Part4_CUDA_SIMT.md)
+- measured outputs: [results/](/home/york/ca_final_project/part4/results)
+
 ## Kernel Mapping
 
 ### Kernel 1
@@ -69,12 +77,29 @@ cd part4
 make
 ```
 
+The default target compiles with:
+
+- `nvcc`
+- `-O2`
+- `-std=c++17`
+- `-arch=sm_86`
+- `-lineinfo`
+- `-Xptxas -v`
+
 ## Run
 
 ```bash
 cd part4
 make run
 ```
+
+The runtime output includes:
+
+- functional metrics: `H_MSE`, `MSE_RX_BEFORE_EQ`, `MSE_LMMSE`, `checksum`, `Verification`
+- configuration: `TPB_LS`, `TPB_EQ`, `LS_KERNEL_MODE`, warmup/timed iterations
+- timing: `LS_KERNEL_MS`, `LMMSE_KERNEL_MS`, `PIPELINE_KERNEL_MS`
+
+`PIPELINE_KERNEL_MS` is the average GPU kernel-only time for running Stage 1 and Stage 2 back-to-back inside the timing loop. It does not include input loading, host-side verification, H2D/D2H copies, allocation, or setup.
 
 ## PTX
 
@@ -89,6 +114,14 @@ make ptx
 cd part4
 make profile
 ```
+
+This uses a short command-line configuration:
+
+```bash
+./main ../data/ofdm_input.bin 1 1
+```
+
+The goal is to reduce replay cost during profiling. The `ncu` numbers should be interpreted as profiling data, not as the main timing source for the sweep table.
 
 ## TPB / Shared-Memory Experiments
 
@@ -111,6 +144,14 @@ Outputs are written to:
 part4/results/
 ```
 
+The key files are:
+
+- [Part4_Experiment_Summary.md](/home/york/ca_final_project/part4/results/Part4_Experiment_Summary.md)
+- `*_build.txt`
+- `*_run.txt`
+- `main_shared_256_256.ptx`
+- `ncu_shared_256_256.txt`
+
 ## Notes
 
 - Stage 1 is the main `__shared__` use case because threads inside one block must cooperatively reduce pilot partial sums into one `Hhat[k]`.
@@ -119,4 +160,9 @@ part4/results/
   - `H_MSE`
   - `MSE_RX_BEFORE_EQ`
   - `MSE_LMMSE`
-  - `checksum`
+- `checksum`
+- The shared-vs-serial comparison should be read as a comparison between:
+  - block-cooperative shared-memory reduction
+  - one-thread-per-subcarrier serial Stage 1
+  It is not evidence that shared memory alone explains the full timing gap.
+- `ncu` output is useful for throughput, waves, register, and memory observations, but the sweep table should still be read from the `cudaEvent` kernel timing in `results/*_run.txt`.
