@@ -74,10 +74,19 @@ Part 2 的第二段主要計算為：
 
 ```text
 Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
-             / (|Hhat[k]|^2 + NOISE_VAR + EPSILON)
+             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
 ```
 
 這段不需要 reduction，而是沿著 subcarrier `k` 做 unit-stride RVV element-wise vectorization。
+
+其中：
+
+```text
+NOISE_VAR = complex noise power sigma_n^2
+NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
+```
+
+因此 Part 2 的正式 LMMSE equalizer 使用較標準的 normalized denominator。
 
 ### CA mapping
 
@@ -145,9 +154,9 @@ checksum != 0
 | --- | --- |
 | `H_MSE` | `0.00001250` |
 | `MSE_RX_BEFORE_EQ` | `0.14093372` |
-| `MSE_LMMSE` | `0.00694250` |
-| `Xmmse[0]` | `0.97359133 + j1.04023778` |
-| `checksum` | `584.51806641` |
+| `MSE_LMMSE` | `0.00681052` |
+| `Xmmse[0]` | `1.01242721 + j1.08173215` |
+| `checksum` | `584.37023926` |
 | `Verification` | `PASS` |
 
 這表示：
@@ -160,16 +169,16 @@ checksum != 0
 
 | Metric | Part 2 RVV |
 | --- | --- |
-| `simSeconds` | `0.067093` |
-| `simTicks` | `67,092,561,000` |
-| `hostSeconds` | `20.20` |
-| `simInsts` | `16,442,183` |
-| `simOps` | `16,442,219` |
-| `numCycles` | `134,185,122` |
-| `CPI` | `8.161012` |
-| `IPC` | `0.122534` |
-| `D-cache misses` | `560,239` |
-| `D-cache miss rate` | `0.120423` |
+| `simSeconds` | `0.067096` |
+| `simTicks` | `67,096,234,000` |
+| `hostSeconds` | `20.99` |
+| `simInsts` | `16,444,742` |
+| `simOps` | `16,444,779` |
+| `numCycles` | `134,192,468` |
+| `CPI` | `8.160189` |
+| `IPC` | `0.122546` |
+| `D-cache misses` | `560,240` |
+| `D-cache miss rate` | `0.120403` |
 | `I-cache misses` | `926` |
 | `I-cache miss rate` | `0.000048` |
 
@@ -177,13 +186,13 @@ checksum != 0
 
 | Metric | Part 1 Scalar | Part 2 RVV | Change |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.074765` | `0.067093` | `-10.26%` |
-| `simInsts` | `17,063,351` | `16,442,183` | `-3.64%` |
-| `numCycles` | `149,530,538` | `134,185,122` | `-10.26%` |
-| `CPI` | `8.763241` | `8.161012` | `-6.87%` |
-| `IPC` | `0.114113` | `0.122534` | `+7.38%` |
-| `D-cache miss rate` | `0.114764` | `0.120423` | `+4.93%` |
-| `I-cache miss rate` | `0.000035` | `0.000048` | `+37.14%` |
+| `simSeconds` | `0.074767` | `0.067096` | `-10.26%` |
+| `simInsts` | `17,065,752` | `16,444,742` | `-3.64%` |
+| `numCycles` | `149,534,050` | `134,192,468` | `-10.26%` |
+| `CPI` | `8.762213` | `8.160189` | `-6.87%` |
+| `IPC` | `0.114126` | `0.122546` | `+7.38%` |
+| `D-cache miss rate` | `0.114747` | `0.120403` | `+4.93%` |
+| `I-cache miss rate` | `0.000034` | `0.000048` | `+41.18%` |
 
 初步解讀：
 

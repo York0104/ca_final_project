@@ -14,8 +14,7 @@
 // ============================================================
 static inline float rvv_dot_product_reduction_f32(const float *a,
                                                   const float *b,
-                                                  int n)
-{
+                                                  int n){
     float total = 0.0f;
     int remaining = n;
 
@@ -50,8 +49,7 @@ static inline float rvv_dot_product_reduction_f32(const float *a,
     return total;
 }
 
-static void estimate_channel_ls_average_rvv_reduction()
-{
+static void estimate_channel_ls_average_rvv_reduction(){
     for (int k = 0; k < NUM_SUBCARRIERS; ++k)
     {
         const float *yr = &Ypilot_r[pilot_index(k, 0)];
@@ -69,10 +67,9 @@ static void estimate_channel_ls_average_rvv_reduction()
 //   Vector lanes cover different subcarriers k for the same data symbol s.
 //   No reduction is needed because each lane produces one Xmmse[s][k].
 // ============================================================
-static void equalize_lmmse_rvv()
-{
+static void equalize_lmmse_rvv(){
 #if defined(__riscv) && defined(__riscv_vector)
-    const float noise_bias = NOISE_VAR + EPSILON;
+    const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
 
     for (int s = 0; s < NUM_DATA_SYMBOLS; ++s)
     {
@@ -135,7 +132,7 @@ static void equalize_lmmse_rvv()
             float hr = Hhat_r[k];
             float hi = Hhat_i[k];
 
-            float denom = hr * hr + hi * hi + NOISE_VAR + EPSILON;
+            float denom = hr * hr + hi * hi + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
 
             Xmmse_r[idx] = (yr * hr + yi * hi) / denom;
             Xmmse_i[idx] = (yi * hr - yr * hi) / denom;
@@ -144,8 +141,7 @@ static void equalize_lmmse_rvv()
 #endif
 }
 
-int main()
-{
+int main(){
     load_input_binary("../data/ofdm_input.bin");
 
     // Computation Stage 1: RVV reduction LS channel estimation

@@ -46,7 +46,14 @@ Y_data[s,k] = H[k] * X_data[s,k] + N_data[s,k]
 
 ```text
 Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
-             / (|Hhat[k]|^2 + NOISE_VAR + EPSILON)
+             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
+```
+
+其中：
+
+```text
+NOISE_VAR = complex noise power sigma_n^2
+NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
 ```
 
 ---
@@ -80,22 +87,22 @@ checksum != 0
 | --- | --- |
 | `H_MSE` | `0.00001250` |
 | `MSE_RX_BEFORE_EQ` | `0.14093372` |
-| `MSE_LMMSE` | `0.00694250` |
-| `Xmmse[0]` | `0.97359151 + j1.04023767` |
-| `checksum` | `584.51818848` |
+| `MSE_LMMSE` | `0.00681053` |
+| `Xmmse[0]` | `1.01242745 + j1.08173215` |
+| `checksum` | `584.37127686` |
 | `Verification` | `PASS` |
 
 ### gem5 baseline
 
 | Metric | Part 1 Scalar |
 | --- | --- |
-| `simSeconds` | `0.074765` |
-| `simInsts` | `17,063,351` |
-| `numCycles` | `149,530,538` |
-| `CPI` | `8.763241` |
-| `IPC` | `0.114113` |
-| `D-cache miss rate` | `0.114764` |
-| `I-cache miss rate` | `0.000035` |
+| `simSeconds` | `0.074767` |
+| `simInsts` | `17,065,752` |
+| `numCycles` | `149,534,050` |
+| `CPI` | `8.762213` |
+| `IPC` | `0.114126` |
+| `D-cache miss rate` | `0.114747` |
+| `I-cache miss rate` | `0.000034` |
 
 Part 1 已可作為正式 baseline。
 
@@ -109,19 +116,19 @@ Part 1 已可作為正式 baseline。
 | --- | --- |
 | `H_MSE` | `0.00001250` |
 | `MSE_RX_BEFORE_EQ` | `0.14093372` |
-| `MSE_LMMSE` | `0.00694250` |
+| `MSE_LMMSE` | `0.00681052` |
 | `Verification` | `PASS` |
 
 ### gem5 stats
 
 | Metric | Part 2 RVV |
 | --- | --- |
-| `simSeconds` | `0.067093` |
-| `simInsts` | `16,442,183` |
-| `numCycles` | `134,185,122` |
-| `CPI` | `8.161012` |
-| `IPC` | `0.122534` |
-| `D-cache miss rate` | `0.120423` |
+| `simSeconds` | `0.067096` |
+| `simInsts` | `16,444,742` |
+| `numCycles` | `134,192,468` |
+| `CPI` | `8.160189` |
+| `IPC` | `0.122546` |
+| `D-cache miss rate` | `0.120403` |
 | `I-cache miss rate` | `0.000048` |
 
 ## Part 3 結果
@@ -132,20 +139,20 @@ Part 1 已可作為正式 baseline。
 | --- | --- |
 | `H_MSE` | `0.00001250` |
 | `MSE_RX_BEFORE_EQ` | `0.14093372` |
-| `MSE_LMMSE` | `0.00694250` |
+| `MSE_LMMSE` | `0.00681053` |
 | `Verification` | `PASS` |
 
 ### gem5 stats
 
 | Metric | Part 3 SIMD-like RVV |
 | --- | --- |
-| `simSeconds` | `0.074766` |
-| `simInsts` | `17,063,365` |
-| `numCycles` | `149,531,160` |
-| `CPI` | `8.763270` |
-| `IPC` | `0.114113` |
-| `D-cache miss rate` | `0.114764` |
-| `I-cache miss rate` | `0.000035` |
+| `simSeconds` | `0.074767` |
+| `simInsts` | `17,065,826` |
+| `numCycles` | `149,534,050` |
+| `CPI` | `8.762175` |
+| `IPC` | `0.114127` |
+| `D-cache miss rate` | `0.114747` |
+| `I-cache miss rate` | `0.000034` |
 
 ---
 
@@ -163,13 +170,13 @@ Part 1 已可作為正式 baseline。
 
 | Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.074765` | `0.067093` | `0.074766` |
-| `simInsts` | `17,063,351` | `16,442,183` | `17,063,365` |
-| `numCycles` | `149,530,538` | `134,185,122` | `149,531,160` |
-| `CPI` | `8.763241` | `8.161012` | `8.763270` |
-| `IPC` | `0.114113` | `0.122534` | `0.114113` |
-| `D-cache miss rate` | `0.114764` | `0.120423` | `0.114764` |
-| `I-cache miss rate` | `0.000035` | `0.000048` | `0.000035` |
+| `simSeconds` | `0.074767` | `0.067096` | `0.074767` |
+| `simInsts` | `17,065,752` | `16,444,742` | `17,065,826` |
+| `numCycles` | `149,534,050` | `134,192,468` | `149,534,050` |
+| `CPI` | `8.762213` | `8.160189` | `8.762175` |
+| `IPC` | `0.114126` | `0.122546` | `0.114127` |
+| `D-cache miss rate` | `0.114747` | `0.120403` | `0.114747` |
+| `I-cache miss rate` | `0.000034` | `0.000048` | `0.000034` |
 
 ## 初步分析
 

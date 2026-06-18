@@ -14,8 +14,7 @@
 //   Strided loads are required because Ypilot[k][p] is stored with
 //   stride NUM_PILOTS across k.
 // ============================================================
-static void estimate_channel_ls_average_rvv_simd_like()
-{
+static void estimate_channel_ls_average_rvv_simd_like(){
 #if defined(__riscv) && defined(__riscv_vector)
     const ptrdiff_t pilot_stride_bytes = static_cast<ptrdiff_t>(NUM_PILOTS * sizeof(float));
 
@@ -86,10 +85,9 @@ static void estimate_channel_ls_average_rvv_simd_like()
 // CA mapping:
 //   Same element-wise RVV equalizer as Part 2.
 // ============================================================
-static void equalize_lmmse_rvv()
-{
+static void equalize_lmmse_rvv(){
 #if defined(__riscv) && defined(__riscv_vector)
-    const float noise_bias = NOISE_VAR + EPSILON;
+    const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
 
     for (int s = 0; s < NUM_DATA_SYMBOLS; ++s)
     {
@@ -152,7 +150,7 @@ static void equalize_lmmse_rvv()
             float hr = Hhat_r[k];
             float hi = Hhat_i[k];
 
-            float denom = hr * hr + hi * hi + NOISE_VAR + EPSILON;
+            float denom = hr * hr + hi * hi + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
 
             Xmmse_r[idx] = (yr * hr + yi * hi) / denom;
             Xmmse_i[idx] = (yi * hr - yr * hi) / denom;
@@ -161,8 +159,7 @@ static void equalize_lmmse_rvv()
 #endif
 }
 
-int main()
-{
+int main(){
     load_input_binary("../data/ofdm_input.bin");
 
     // Computation Stage 1: SIMD-like RVV LS channel estimation

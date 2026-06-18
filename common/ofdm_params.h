@@ -20,18 +20,15 @@ static constexpr float EPSILON = 1.0e-6f;
 
 static constexpr uint32_t OFDM_INPUT_MAGIC = 0x4F46444Du;
 
-static inline int pilot_index(int k, int p)
-{
+static inline int pilot_index(int k, int p){
     return k * NUM_PILOTS + p;
 }
 
-static inline int data_index(int s, int k)
-{
+static inline int data_index(int s, int k){
     return s * NUM_SUBCARRIERS + k;
 }
 
-static inline float abs_float(float v)
-{
+static inline float abs_float(float v){
     return (v < 0.0f) ? -v : v;
 }
 

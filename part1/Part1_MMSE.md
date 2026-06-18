@@ -88,13 +88,13 @@ Y_data[s,k] = H[k] * X_data[s,k] + N_data[s,k]
 
 ```text
 Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
-             / (|Hhat[k]|^2 + NOISE_VAR + EPSILON)
+             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
 ```
 
 若令：
 
 ```text
-D[k] = Hhat_r[k]^2 + Hhat_i[k]^2 + NOISE_VAR + EPSILON
+D[k] = Hhat_r[k]^2 + Hhat_i[k]^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON
 ```
 
 則：
@@ -102,6 +102,25 @@ D[k] = Hhat_r[k]^2 + Hhat_i[k]^2 + NOISE_VAR + EPSILON
 ```text
 Xmmse_r[s,k] = (Ydata_r[s,k] * Hhat_r[k] + Ydata_i[s,k] * Hhat_i[k]) / D[k]
 Xmmse_i[s,k] = (Ydata_i[s,k] * Hhat_r[k] - Ydata_r[s,k] * Hhat_i[k]) / D[k]
+```
+
+其中：
+
+```text
+NOISE_VAR = complex noise power sigma_n^2
+NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
+```
+
+由於本專題的 QPSK symbol 採用 `±1 ± j1`，所以：
+
+```text
+SYMBOL_POWER = 2
+```
+
+因此正式 LMMSE denominator 採用較標準的：
+
+```text
+|Hhat[k]|^2 + sigma_n^2 / sigma_x^2 + EPSILON
 ```
 
 ---
@@ -185,9 +204,9 @@ checksum != 0
 | --- | --- |
 | `H_MSE` | `0.00001250` |
 | `MSE_RX_BEFORE_EQ` | `0.14093372` |
-| `MSE_LMMSE` | `0.00694250` |
-| `Xmmse[0]` | `0.97359151 + j1.04023767` |
-| `checksum` | `584.51818848` |
+| `MSE_LMMSE` | `0.00681053` |
+| `Xmmse[0]` | `1.01242745 + j1.08173215` |
+| `checksum` | `584.37127686` |
 | `Verification` | `PASS` |
 
 這表示：
@@ -202,13 +221,13 @@ checksum != 0
 
 | Metric | Part 1 Scalar |
 | --- | --- |
-| `simSeconds` | `0.074765` |
-| `simInsts` | `17,063,351` |
-| `numCycles` | `149,530,538` |
-| `CPI` | `8.763241` |
-| `IPC` | `0.114113` |
-| `D-cache miss rate` | `0.114764` |
-| `I-cache miss rate` | `0.000035` |
+| `simSeconds` | `0.074767` |
+| `simInsts` | `17,065,752` |
+| `numCycles` | `149,534,050` |
+| `CPI` | `8.762213` |
+| `IPC` | `0.114126` |
+| `D-cache miss rate` | `0.114747` |
+| `I-cache miss rate` | `0.000034` |
 
 ---
 
