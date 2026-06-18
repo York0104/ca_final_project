@@ -6,8 +6,6 @@
 #include "../common/ofdm_verify.h"
 
 // Stage 1: RVV reduction for LS channel estimation.
-// Lanes map to different pilot observations for one subcarrier k, and
-// vfredusum.vs reduces the vector products to one Hhat[k].
 static inline float rvv_dot_product_reduction_f32(const float *a, const float *b, int n){
     // a = yr = Ypilot_r[k][0...255]
     // b = pilot_w[0...255]
@@ -56,7 +54,6 @@ static void estimate_channel_ls_average_rvv_reduction(){
 }
 
 // Stage 2: RVV element-wise LMMSE equalization.
-// Lanes map to adjacent subcarriers k for one data symbol s.
 static void equalize_lmmse_rvv(){
 #if OFDM_HAS_RVV
     const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
