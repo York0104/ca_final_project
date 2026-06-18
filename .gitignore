@@ -3,11 +3,13 @@ main
 main_host
 *.o
 *.out
+generate_ofdm_data
 
 # gem5 outputs
 m5out/
 part1/m5out/
 part2/m5out/
+part3/m5out/
 part1_kernel_only/m5out/
 part2_kernel_only/m5out/
 
@@ -16,6 +18,7 @@ part2_kernel_only/m5out/
 *.tmp
 *.swp
 *.swo
+data/ofdm_input.bin
 
 # OS / editor files
 .DS_Store

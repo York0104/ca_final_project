@@ -1,159 +1,135 @@
 # CA Final Project Overall Results Analysis
 
-## 1. Purpose
+## 正式主題
 
-This file records the measured results collected so far, including:
+本專題目前的正式主題為：
 
-- Part 1 full program scalar baseline
-- Part 2 full program RVV vector reduction
-- Part 1 kernel-only scalar channel estimation
-- Part 2 kernel-only RVV reduction channel estimation
+```text
+LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
+```
 
-The purpose of this summary is to keep all key numbers in one place before writing the final report.
+正式三個 Part 定義如下：
 
----
-
-## 2. Full Program Results
-
-### 2.1 Part 1 Full Program
-
-| Metric | Value |
-| --- | --- |
-| `H_MSE` | `0.00001260` |
-| `MSE_RX` | `0.33055928` |
-| `MSE_MMSE` | `0.01459649` |
-| `simSeconds` | `0.138000` |
-| `simInsts` | `34,616,971` |
-| `numCycles` | `276,000,316` |
-| `CPI` | `7.972973` |
-| `IPC` | `0.125424` |
-| `D-cache miss rate` | `0.120870` |
-| `I-cache miss rate` | `0.000014` |
-
-### 2.2 Part 2 Full Program
-
-| Metric | Value |
-| --- | --- |
-| `H_MSE` | `0.00001260` |
-| `MSE_RX` | `0.33055928` |
-| `MSE_MMSE` | `0.01459648` |
-| `simSeconds` | `0.130226` |
-| `simInsts` | `33,996,109` |
-| `numCycles` | `260,452,526` |
-| `CPI` | `7.661241` |
-| `IPC` | `0.130527` |
-| `D-cache miss rate` | `0.124492` |
-| `I-cache miss rate` | `0.000016` |
-
-### 2.3 Full Program Comparison
-
-| Metric | Part 1 Full | Part 2 Full |
+| Part | Computation Stage 1 | Computation Stage 2 |
 | --- | --- | --- |
-| `H_MSE` | `0.00001260` | `0.00001260` |
-| `MSE_RX` | `0.33055928` | `0.33055928` |
-| `MSE_MMSE` | `0.01459649` | `0.01459648` |
-| `simSeconds` | `0.138000` | `0.130226` |
-| `simInsts` | `34,616,971` | `33,996,109` |
-| `numCycles` | `276,000,316` | `260,452,526` |
-| `CPI` | `7.972973` | `7.661241` |
-| `IPC` | `0.125424` | `0.130527` |
-| `D-cache miss rate` | `0.120870` | `0.124492` |
-| `I-cache miss rate` | `0.000014` | `0.000016` |
+| `Part 1` | Scalar LS channel estimation | Scalar LMMSE equalization |
+| `Part 2` | RVV reduction LS channel estimation | RVV LMMSE equalization |
+| `Part 3` | SIMD-like RVV LS channel estimation | RVV LMMSE equalization |
 
-Initial observation:
-
-- Part 2 full program is faster than Part 1 full program.
-- Correctness is maintained.
-- The overall speedup is visible but modest, because only the channel estimation kernel was vectorized while MMSE equalization remained scalar.
+這代表目前的正式 workload 是一個簡化但完整的 OFDM receiver pipeline，而不是單一 dot product benchmark。
 
 ---
 
-## 3. Kernel-only Results
+## 共同數學模型
 
-### 3.1 Part 1 Kernel-only
+### Pilot stage
+
+```text
+X_pilot[p,k] = 1 + j0
+Y_pilot[p,k] = H[k] + N_pilot[p,k]
+```
+
+### LS / averaging channel estimation
+
+```text
+Hhat[k] = sum_p Y_pilot[p,k] * w[p]
+w[p] = 1 / P
+```
+
+### Data stage
+
+```text
+Y_data[s,k] = H[k] * X_data[s,k] + N_data[s,k]
+```
+
+### LMMSE / MMSE one-tap equalizer
+
+```text
+Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
+             / (|Hhat[k]|^2 + NOISE_VAR + EPSILON)
+```
+
+---
+
+## 正式驗證指標
+
+目前正式主流程只保留四個驗證量：
+
+| Metric | 用途 |
+| --- | --- |
+| `H_MSE` | 驗證 channel estimation |
+| `MSE_RX_BEFORE_EQ` | 未等化前 baseline |
+| `MSE_LMMSE` | 驗證 equalization 效果 |
+| `checksum` | 防止 compiler 移除 `Hhat / Xmmse` |
+
+Verification 條件：
+
+```text
+MSE_LMMSE < MSE_RX_BEFORE_EQ
+H_MSE < 0.01
+checksum != 0
+```
+
+---
+
+## Part 1 結果
+
+### Host correctness
 
 | Metric | Value |
 | --- | --- |
-| `H_MSE` | `0.00001260` |
-| `checksum_Hhat` | `394.26150513` |
-| `simSeconds` | `0.493423` |
-| `simInsts` | `122,690,231` |
-| `numCycles` | `986,846,688` |
-| `CPI` | `8.043400` |
-| `IPC` | `0.124326` |
-| `D-cache miss rate` | `0.088941` |
-| `I-cache miss rate` | `0.000004` |
+| `H_MSE` | `0.00001250` |
+| `MSE_RX_BEFORE_EQ` | `0.14093372` |
+| `MSE_LMMSE` | `0.00694250` |
+| `Xmmse[0]` | `0.97359151 + j1.04023767` |
+| `checksum` | `584.51818848` |
+| `Verification` | `PASS` |
 
-### 3.2 Part 2 Kernel-only
+### gem5 baseline
 
-| Metric | Value |
+| Metric | Part 1 Scalar |
 | --- | --- |
-| `H_MSE` | `0.00001260` |
-| `checksum_Hhat` | `394.26150513` |
-| `simSeconds` | `0.527467` |
-| `simInsts` | `162,062,900` |
-| `numCycles` | `1,054,933,786` |
-| `CPI` | `6.509409` |
-| `IPC` | `0.153624` |
-| `D-cache miss rate` | `0.066973` |
-| `I-cache miss rate` | `0.000003` |
+| `simSeconds` | `0.074765` |
+| `simInsts` | `17,063,351` |
+| `numCycles` | `149,530,538` |
+| `CPI` | `8.763241` |
+| `IPC` | `0.114113` |
+| `D-cache miss rate` | `0.114764` |
+| `I-cache miss rate` | `0.000035` |
 
-### 3.3 Kernel-only Comparison
-
-| Metric | Part 1 Kernel-only | Part 2 Kernel-only |
-| --- | --- | --- |
-| `H_MSE` | `0.00001260` | `0.00001260` |
-| `checksum_Hhat` | `394.26150513` | `394.26150513` |
-| `simSeconds` | `0.493423` | `0.527467` |
-| `simInsts` | `122,690,231` | `162,062,900` |
-| `numCycles` | `986,846,688` | `1,054,933,786` |
-| `CPI` | `8.043400` | `6.509409` |
-| `IPC` | `0.124326` | `0.153624` |
-| `D-cache miss rate` | `0.088941` | `0.066973` |
-| `I-cache miss rate` | `0.000004` | `0.000003` |
-
-Initial observation:
-
-- Part 2 kernel-only preserves correctness exactly.
-- Part 2 kernel-only shows lower `CPI`, higher `IPC`, and lower cache miss rates.
-- However, total `simInsts`, `numCycles`, and `simSeconds` are higher than Part 1 kernel-only.
-- This suggests the current RVV reduction implementation improves per-instruction efficiency, but still incurs higher total execution cost in gem5 for this kernel-only setup.
+Part 1 已可作為正式 baseline。
 
 ---
 
-## 4. Cross-Section Observation
+## Part 2 / Part 3 狀態
 
-Current results show an interesting contrast:
+由於本次專案已經重新整理成：
 
-- In the full program, Part 2 is faster than Part 1.
-- In the kernel-only experiment, Part 2 is currently slower than Part 1.
+```text
+common/ + data_gen/ + part1/part2/part3/
+```
 
-This means the kernel-only data should be interpreted carefully. Possible reasons include:
+且正式主題也從舊版設計收斂成：
 
-- RVV reduction setup overhead inside the helper
-- repeated `vsetvli` and reduction control overhead
-- gem5 modeling effects for this specific inline assembly pattern
-- `KERNEL_REPEAT = 100` amplifying fixed RVV overheads
+```text
+LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
+```
 
-This is not necessarily a contradiction, but it is an important discussion point for the final report.
+因此舊版 Part 2、kernel-only、ZF comparison 的結果都不再代表目前正式設計。
 
----
+目前文件策略如下：
 
-## 5. Suggested Report Positioning
-
-Recommended report structure:
-
-- Use **Full Program Performance** as the main required result.
-- Use **Kernel-only Performance** as a supplementary analysis.
-- If full-program speedup is limited, explain that scalar equalization, verification, checksum, and other non-kernel work dilute the overall RVV benefit.
-- If kernel-only RVV is slower than expected, discuss RVV setup/reduction overhead and gem5 behavior honestly instead of hiding the result.
+- 保留 Part 1 新版結果
+- 刪除舊的 kernel-only / ZF 導向分析
+- Part 2 / Part 3 等重跑後再記錄正式數據
 
 ---
 
-## 6. Next Step
+## 目前結論
 
-Recommended next actions:
+截至目前為止，可以先確立：
 
-1. Add Part 1 kernel-only and Part 2 kernel-only dedicated markdown reports.
-2. Compute percentage change tables for all comparisons.
-3. Investigate whether the Part 2 kernel-only RVV helper can be optimized further.
+1. 專案正式主題已定義清楚。
+2. 程式結構已對齊成 `common + data_gen + part1 + part2 + part3`。
+3. Part 1 已完成 host 與 gem5 correctness / baseline。
+4. Part 2 與 Part 3 應以新設計重新執行，再補正式比較表。
