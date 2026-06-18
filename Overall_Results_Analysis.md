@@ -1,14 +1,14 @@
 # CA Final Project Overall Results Analysis
 
-## 正式主題
+## Scope
 
-本專題目前的正式主題為：
+本專題目前聚焦在：
 
 ```text
 LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 ```
 
-正式三個 Part 定義如下：
+目前納入比較的三個 parts：
 
 | Part | Computation Stage 1 | Computation Stage 2 |
 | --- | --- | --- |
@@ -16,9 +16,9 @@ LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 | `Part 2` | RVV reduction LS channel estimation | RVV LMMSE equalization |
 | `Part 3` | SIMD-like RVV LS channel estimation | RVV LMMSE equalization |
 
-這代表目前的正式 workload 是一個簡化但完整的 OFDM receiver pipeline，而不是單一 dot product benchmark。
+這份表整理的是同一個 OFDM receiver workload 在 Part 1～3 的 gem5 結果，不包含 Part 4 的 CUDA kernel timing。
 
-目前實作進度只到 `Part 1 ~ Part 3`。`Part 4` 與 `Part 5` 尚未實作，不納入本結果分析。
+Part 4 已有 CUDA source、PTX、NCU 與 sweep 結果，但量測方式是 GPU kernel-only timing，和 gem5 simulated statistics 不同，所以另外放在 Part 4 文件。Part 5 仍未實作。
 
 ---
 
@@ -60,9 +60,9 @@ NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
 
 ---
 
-## 正式驗證指標
+## Verification
 
-目前正式主流程只保留四個驗證量：
+Part 1～3 共用四個驗證量：
 
 | Metric | 用途 |
 | --- | --- |
@@ -106,7 +106,7 @@ checksum != 0
 | `D-cache miss rate` | `0.114745` |
 | `I-cache miss rate` | `0.000046` |
 
-Part 1 已可作為正式 baseline。
+這組數據用作 Part 2 / Part 3 的 gem5 baseline。
 
 ---
 
@@ -158,15 +158,11 @@ Part 1 已可作為正式 baseline。
 
 ---
 
-## 目前結論
+## Summary
 
-截至目前為止，可以先確立：
-
-1. 專案正式主題已定義清楚。
-2. 程式結構已對齊成 `common + data_gen + part1 + part2 + part3`。
-3. Part 1 / Part 2 / Part 3 都已在新版正式設計下完成執行。
-4. 三個 Part 的 correctness 均通過，`H_MSE` 與 `MSE_LMMSE` 基本一致。
-5. 目前最佳 performance 來自 Part 2。
+- Part 1, Part 2, and Part 3 all pass the shared correctness checks.
+- `H_MSE` and `MSE_LMMSE` stay close across the three implementations.
+- In the current gem5 runs, Part 2 has the lowest `simSeconds` and `numCycles`.
 
 ## 正式比較表
 
@@ -180,29 +176,25 @@ Part 1 已可作為正式 baseline。
 | `D-cache miss rate` | `0.114745` | `0.170969` | `0.229839` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
 
-## 初步分析
+## Interpretation
 
-- Part 2 相較 Part 1 有明顯改善：
+- Part 2 relative to Part 1:
   - `simSeconds` 約下降 `20.57%`
   - `numCycles` 約下降 `20.57%`
   - `simInsts` 約下降 `33.23%`
 
-- Part 2 的 CPI 與 cache miss rate 雖然變差，但總指令數下降更多，因此整體仍最快。
+- CPI and miss rate increase in Part 2, but the instruction count drops more than enough to reduce total cycles.
 
-- Part 3 相較 Part 1 並沒有帶來速度優勢：
+- Part 3 relative to Part 1:
   - `simSeconds` 約增加 `5.34%`
   - `numCycles` 約增加 `5.34%`
   - `D-cache miss rate` 明顯升高到 `0.229839`
 
-- Part 3 慢於 Part 2 的主要原因，是 Stage 1 使用 `vlse32.v` 做 strided memory access。這種 across-`k` 的存取模式 spatial locality 較差，會把 CPI 與 cache miss rate 明顯推高。
+- Part 3 keeps the required across-`k` mapping, but the `vlse32.v` access pattern hurts spatial locality and pushes up both CPI and D-cache miss rate.
 
-- 反組譯檢查也支持上述結果：
+- The disassembly check matches the code-level mapping:
   - Part 2 binary 可見 `vfredusum.vs`
   - Part 3 binary 可見 `vlse32.v`
   - Part 3 binary 不含 vector reduction instruction
 
-- 因此目前可以先得出：
-
-```text
-Part 2 is the best-performing implementation under the current design.
-```
+- Within the current Part 1～3 gem5 comparison, Part 2 is the fastest version.

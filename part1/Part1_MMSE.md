@@ -1,23 +1,20 @@
 # CA Final Project Part 1
 
-## 主題
+## Scope
 
-Part 1 的正式主題為：
+Part 1 uses the same OFDM workload as the later RVV and CUDA parts:
 
 ```text
 LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 ```
 
-Part 1 對應的實作是：
-
 ```text
-Scalar LS Channel Estimation
-+ Scalar LMMSE Equalization
+Scalar LS Channel Estimation + Scalar LMMSE Equalization
 ```
 
 ---
 
-## 演算法定位
+## Workload
 
 本專題不是單純的 dot product benchmark，而是一個簡化但完整的 OFDM receiver computation pipeline。
 
@@ -26,16 +23,8 @@ Part 1 包含兩個主要 computation stages：
 1. `LS Channel Estimation`
 2. `LMMSE Equalization`
 
-其中：
-
-- Stage 1 提供題目要求的 nested-loop summation / reduction form
-- Stage 2 提供 element-wise complex arithmetic workload
-
-因此整體 workload 同時具備：
-
-- DSP-related numerical computing 特性
-- channel estimation reduction kernel
-- equalizer data-parallel arithmetic kernel
+- Stage 1 carries the nested weighted summation required by the assignment.
+- Stage 2 carries the element-wise complex arithmetic used by the equalizer.
 
 ---
 
@@ -164,9 +153,9 @@ Part 1 的 [main.cpp](/home/york/ca_final_project/part1/main.cpp) 只保留本 P
 
 ---
 
-## 驗證指標
+## Verification
 
-正式主流程保留四個驗證量：
+The runtime prints four shared verification values:
 
 ```text
 H_MSE
@@ -209,11 +198,11 @@ checksum != 0
 | `checksum` | `584.37127686` |
 | `Verification` | `PASS` |
 
-這表示：
+Interpretation:
 
-- LS channel estimation 正確
-- LMMSE equalizer 明顯改善資料恢復誤差
-- 結果有被實際使用，未被 compiler 移除
+- `H_MSE` is small.
+- `MSE_LMMSE` is well below `MSE_RX_BEFORE_EQ`.
+- `checksum` is non-zero, so the outputs are consumed after the kernels.
 
 ### gem5 baseline
 
@@ -231,27 +220,6 @@ checksum != 0
 
 ---
 
-## 結論
+## Summary
 
-Part 1 已完成正式 scalar baseline：
-
-```text
-Scalar LS Channel Estimation
-+ Scalar LMMSE Equalization
-```
-
-這組結果可作為後續比較基準：
-
-- Part 2：`RVV reduction LS + RVV LMMSE`
-- Part 3：`SIMD-like RVV LS + RVV LMMSE`
-
-目前依照新版正式結果來看：
-
-- Part 2 相較 Part 1 有明顯加速
-- Part 3 目前與 Part 1 幾乎相同
-
-因此 Part 1 的角色已可明確定義為：
-
-```text
-formal scalar baseline for all later RVV comparisons
-```
+Part 1 is the scalar reference used for the later RVV comparisons.

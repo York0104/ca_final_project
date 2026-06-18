@@ -11,13 +11,18 @@ static constexpr int TOTAL_PILOT = NUM_SUBCARRIERS * NUM_PILOTS;
 static constexpr int TOTAL_DATA = NUM_SUBCARRIERS * NUM_DATA_SYMBOLS;
 
 static constexpr float NOISE_STD = 0.0404f;
-static constexpr float SYMBOL_POWER = 2.0f;
+static constexpr float SYMBOL_POWER = 2.0f; // for QPSK symbol
 static constexpr float NOISE_VAR_PER_REAL = NOISE_STD * NOISE_STD;
+
+// [∣N∣^2]=E[n_r^2​+n_i^2​]=2σ^2
 static constexpr float COMPLEX_NOISE_POWER = 2.0f * NOISE_VAR_PER_REAL;
 static constexpr float NOISE_VAR = COMPLEX_NOISE_POWER;
+
+// LMMSE regularization term
 static constexpr float NOISE_VAR_OVER_SYMBOL_POWER = COMPLEX_NOISE_POWER / SYMBOL_POWER;
 static constexpr float EPSILON = 1.0e-6f;
 
+// binary input file：OFDM
 static constexpr uint32_t OFDM_INPUT_MAGIC = 0x4F46444Du;
 
 #if defined(__CUDACC__)

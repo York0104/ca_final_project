@@ -51,6 +51,9 @@ static inline void cuda_check(cudaError_t err, const char *what){
     }
 }
 
+// One block reduces one subcarrier k.
+// Threads cooperate through shared memory because the pilot sum is a
+// block-level reduction.
 __global__ void ls_channel_estimation_shared_kernel(const float *Ypilot_r_dev,
                                                     const float *Ypilot_i_dev,
                                                     const float *pilot_w_dev,
@@ -91,6 +94,8 @@ __global__ void ls_channel_estimation_shared_kernel(const float *Ypilot_r_dev,
     }
 }
 
+// Simple Stage 1 baseline for the shared-memory comparison.
+// One thread handles one subcarrier and runs the pilot loop serially.
 __global__ void ls_channel_estimation_serial_kernel(const float *Ypilot_r_dev,
                                                     const float *Ypilot_i_dev,
                                                     const float *pilot_w_dev,
@@ -116,6 +121,7 @@ __global__ void ls_channel_estimation_serial_kernel(const float *Ypilot_r_dev,
     Hhat_i_dev[k] = acc_i;
 }
 
+// Stage 2 uses one thread per flattened output index.
 __global__ void lmmse_equalization_kernel(const float *Ydata_r_dev,
                                           const float *Ydata_i_dev,
                                           const float *Hhat_r_dev,

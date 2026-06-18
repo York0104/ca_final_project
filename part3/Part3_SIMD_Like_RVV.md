@@ -1,18 +1,15 @@
 # CA Final Project Part 3
 
-## 主題
+## Scope
 
-Part 3 的正式主題為：
+Part 3 keeps the same OFDM workload and changes the Stage 1 mapping:
 
 ```text
 LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 ```
 
-Part 3 對應的實作是：
-
 ```text
-SIMD-like RVV LS Channel Estimation
-+ RVV LMMSE Equalization
+SIMD-like RVV LS Channel Estimation + RVV LMMSE Equalization
 ```
 
 ---
@@ -33,7 +30,7 @@ SIMD-like RVV LS channel estimation
 + RVV LMMSE equalization
 ```
 
-因此 Part 2 與 Part 3 的主要差別在於 Stage 1 的 parallelization strategy。
+The main difference from Part 2 is the Stage 1 mapping.
 
 ---
 
@@ -64,11 +61,7 @@ no reduction
 strided access -> vlse32.v
 ```
 
-這正好符合 Part 3 題目要求：
-
-- SIMD-like RVV
-- 不使用 reduction
-- 需要 strided memory access
+This stage uses SIMD-like RVV lanes, keeps one partial sum per lane, and relies on strided access instead of vector reduction.
 
 ---
 
@@ -110,7 +103,7 @@ NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
 
 ---
 
-## 驗證指標
+## Verification
 
 Part 3 與 Part 1 / Part 2 相同，只保留：
 
@@ -119,11 +112,7 @@ Part 3 與 Part 1 / Part 2 相同，只保留：
 - `MSE_LMMSE`
 - `checksum`
 
-這樣可以把主題聚焦在：
-
-```text
-LS channel estimation + LMMSE equalization acceleration
-```
+The printed checks are the same ones used in Parts 1 and 2.
 
 而不被額外的 ZF comparison 分散。
 
@@ -144,7 +133,7 @@ LS channel estimation + LMMSE equalization acceleration
 | `checksum` | `584.37115479` |
 | `Verification` | `PASS` |
 
-Part 3 與 Part 1 / Part 2 的 correctness 幾乎一致。`objdump` 可見 `vlse32.v`，且未出現 `vfredusum.vs` 或其他 vector reduction instruction。
+`objdump` shows `vlse32.v`, and it does not show `vfredusum.vs` or other vector reduction instructions.
 
 ### gem5 stats
 
@@ -175,25 +164,8 @@ Part 3 與 Part 1 / Part 2 的 correctness 幾乎一致。`objdump` 可見 `vlse
 | `D-cache miss rate` | `0.114745` | `0.170969` | `0.229839` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
 
-初步解讀：
+## Interpretation
 
-- Part 3 在目前設計下慢於 Part 2，也略慢於 Part 1
-- 相較 Part 1，Part 3 的 `simSeconds` 約增加 `5.34%`
-- 相較 Part 2，Part 3 的 `simSeconds` 約增加 `32.63%`
-- 更合理的原因是 Stage 1 使用 `vlse32.v` 進行 strided memory access，跨 `k` 的 stride 為 `NUM_PILOTS * sizeof(float)`，spatial locality 較差
-- 較差的 spatial locality 會大幅提高 D-cache miss rate，並把 CPI 推高到 `12.97`
-- 因此即使 Part 3 的 instruction count 低於 Part 1，最終 cycles 與 simulated time 仍沒有優勢
-- 相較之下，Part 2 的 RVV reduction + RVV LMMSE equalization 目前最有效
-
----
-
-## 結論
-
-Part 3 的正式定位是：
-
-```text
-SIMD-like RVV LS Channel Estimation
-+ RVV LMMSE Equalization
-```
-
-其中 Stage 1 展示的是「不使用 reduction 的 across-output SIMD-like accumulation」，Stage 2 則延續 Part 2 的 RVV LMMSE equalization。
+- `simInsts` drops relative to Part 1, but `simSeconds` and `numCycles` increase.
+- The Stage 1 `vlse32.v` pattern uses a `NUM_PILOTS * sizeof(float)` byte stride across `k`, so the cache behavior is worse than in Part 2.
+- The miss-rate increase is large enough to wipe out the benefit from the lower instruction count.

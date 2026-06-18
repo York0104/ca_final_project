@@ -1,6 +1,6 @@
 # Part 4
 
-## Goal
+## Scope
 
 Part 4 is the CUDA SIMT version of the current project workload:
 
@@ -13,7 +13,7 @@ This part processes a single OFDM input pattern from:
 ../data/ofdm_input.bin
 ```
 
-It does not implement the multi-pattern batching idea from Part 5.
+It does not implement the multi-pattern batching used later in Part 5.
 
 ## Kernel Mapping
 
@@ -33,7 +33,7 @@ It does not implement the multi-pattern batching idea from Part 5.
 - flattened index:
   - `idx = blockIdx.x * blockDim.x + threadIdx.x`
 
-## Current Configuration
+## Default Configuration
 
 - `TPB_LS = 256`
 - `TPB_EQ = 256`
@@ -55,7 +55,7 @@ Example:
 ./main ../data/ofdm_input.bin 1 1 serial
 ```
 
-This is especially useful for `ncu`, so profiling does not repeat hundreds of kernel launches.
+This is mainly for `ncu`, so profiling does not replay the long timing loop.
 
 The optional `ls_mode` argument supports:
 
@@ -114,7 +114,7 @@ part4/results/
 ## Notes
 
 - Stage 1 is the main `__shared__` use case because threads inside one block must cooperatively reduce pilot partial sums into one `Hhat[k]`.
-- Stage 2 is primarily element-wise, so the first version uses straightforward global-memory accesses instead of forcing unnecessary shared-memory traffic.
+- Stage 2 is primarily element-wise, so the current version keeps the straightforward global-memory path instead of adding shared-memory traffic and synchronization with little reuse.
 - Correctness is checked with the same metrics as Parts 1–3:
   - `H_MSE`
   - `MSE_RX_BEFORE_EQ`

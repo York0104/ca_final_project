@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// Hhat vs Htrue：Channel estimation 是否正確
 static inline float compute_channel_mse(){
     float acc = 0.0f;
 
@@ -20,7 +21,9 @@ static inline float compute_channel_mse(){
     return acc / static_cast<float>(NUM_SUBCARRIERS);
 }
 
-static inline float compute_rx_mse_before_equalization(){
+// Ydata vs Xdata：等化前原始 received signal 的誤差  -> baseline
+static inline float compute_rx_mse_before_equalization()
+{
     float acc = 0.0f;
 
     for (int idx = 0; idx < TOTAL_DATA; ++idx){
@@ -32,6 +35,7 @@ static inline float compute_rx_mse_before_equalization(){
     return acc / static_cast<float>(TOTAL_DATA);
 }
 
+// Xmmse vs Xdata：等化後是否更接近原始 QPSK data
 static inline float compute_lmmse_mse(){
     float acc = 0.0f;
 
@@ -44,6 +48,7 @@ static inline float compute_lmmse_mse(){
     return acc / static_cast<float>(TOTAL_DATA);
 }
 
+// 等化後比等化前好&channel estimation 沒有明顯錯誤&output 不為空
 static inline float checksum_lmmse_results(){
     float sum = 0.0f;
 

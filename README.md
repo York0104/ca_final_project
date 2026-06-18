@@ -11,14 +11,14 @@ The workload is a pilot-based OFDM receiver with two computation stages:
 1. LS channel estimation
 2. One-tap LMMSE equalization
 
-## Current Status
+## Status
 
 Currently implemented:
 
 - `Part 1` — Scalar baseline
 - `Part 2` — RVV vector reduction
 - `Part 3` — SIMD-like RVV parallelization
-- `Part 4` — CUDA SIMT initial implementation
+- `Part 4` — CUDA SIMT single-pattern implementation
 
 Prepared but not yet implemented:
 
@@ -33,7 +33,7 @@ data/        Generated binary input
 part1/       Scalar baseline
 part2/       RVV reduction implementation
 part3/       SIMD-like RVV implementation
-part4/       CUDA work directory placeholder
+part4/       CUDA SIMT implementation and experiment scripts
 part5/       CUDA work directory placeholder
 reference/   Course references and PDFs
 docs/        Audit / supplementary notes
@@ -112,7 +112,7 @@ Each `make` run:
 - runs gem5 with `TimingSimpleCPU`
 - prints key stats from `m5out/stats.txt`
 
-## Current gem5 Results
+## gem5 Results
 
 | Metric | Part 1 | Part 2 | Part 3 |
 | --- | --- | --- | --- |
@@ -124,10 +124,10 @@ Each `make` run:
 | `D-cache miss rate` | `0.114745` | `0.170969` | `0.229839` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
 
-Current conclusion:
+Interpretation:
 
-- `Part 2` is the best-performing implementation so far.
-- `Part 3` is compliant with the assignment intent, but its strided RVV access hurts locality and performance.
+- `Part 2` has the lowest `simSeconds` and `numCycles` in the current gem5 runs.
+- `Part 3` keeps the required across-`k` SIMD-like mapping, but the strided `vlse32.v` path raises the miss rate and cycle count.
 
 ## Verification
 
@@ -152,9 +152,9 @@ The shared validation checks:
 - Runs under gem5 in Docker
 - `part2/` and `part3/` require RVV-enabled compilation
 
-### CUDA Readiness
+### CUDA
 
-The CUDA environment for future `Part 4` / `Part 5` work has already been verified:
+The CUDA environment is already usable for `Part 4`, and the same setup will be reused for `Part 5`:
 
 - GPU: `NVIDIA GeForce RTX 3060`
 - Compute Capability: `8.6`
@@ -174,4 +174,4 @@ Note:
 - The project container uses `CUDA Toolkit 12.4.1`
 - This combination is working correctly in the current environment
 
-So no additional CUDA environment setup is currently required before starting `Part 4` or `Part 5`.
+No extra CUDA setup is needed before continuing with `Part 4` or starting `Part 5`.

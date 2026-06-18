@@ -8,7 +8,8 @@ This audit covers only the currently implemented work:
 - `Part 2` — RVV vector reduction
 - `Part 3` — SIMD-like RVV parallelization
 
-`Part 4` and `Part 5` are not implemented and are intentionally excluded from this audit.
+`Part 4` is implemented elsewhere in the repository, but it is outside the scope of this RVV/gem5 audit.
+`Part 5` is not implemented.
 
 ## Reference Check
 
@@ -172,7 +173,8 @@ Part 3:
 
 - The project currently uses fixed compile-time dimensions: `512` subcarriers, `256` pilots, `512` data symbols.
 - Part 3 chooses its active lane count through `vsetvli`; on the current gem5 configuration this means up to 8 FP32 lanes for `e32,m1`.
-- `Part 4` and `Part 5` remain future work only.
+- This document does not audit CUDA code paths or GPU profiling artifacts.
+- `Part 5` remains unimplemented.
 
 ## Final Verdict
 

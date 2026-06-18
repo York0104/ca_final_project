@@ -5,15 +5,10 @@
 #include "../common/ofdm_io.h"
 #include "../common/ofdm_verify.h"
 
-// ============================================================
-// Computation Stage 1 - SIMD-like RVV LS Channel Estimation
-//
-// CA mapping:
-//   Vector lanes cover different output subcarriers k.
-//   No vector reduction is used.
-//   Strided loads are required because Ypilot[k][p] is stored with
-//   stride NUM_PILOTS across k.
-// ============================================================
+// Stage 1: SIMD-like RVV LS channel estimation.
+// Lanes map to different output subcarriers k. This path keeps one
+// partial sum per lane, uses no vector reduction, and relies on
+// vlse32.v because Ypilot[k][p] is strided across k.
 static void estimate_channel_ls_average_rvv_simd_like(){
 #if OFDM_HAS_RVV
     const ptrdiff_t pilot_stride_bytes = static_cast<ptrdiff_t>(NUM_PILOTS * sizeof(float));
@@ -79,12 +74,7 @@ static void estimate_channel_ls_average_rvv_simd_like(){
 #endif
 }
 
-// ============================================================
-// Computation Stage 2 - RVV Element-wise LMMSE Equalization
-//
-// CA mapping:
-//   Same element-wise RVV equalizer as Part 2.
-// ============================================================
+// Stage 2: same RVV element-wise equalizer used in Part 2.
 static void equalize_lmmse_rvv(){
 #if OFDM_HAS_RVV
     const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
@@ -162,10 +152,7 @@ static void equalize_lmmse_rvv(){
 int main(){
     load_input_binary("../data/ofdm_input.bin");
 
-    // Computation Stage 1: SIMD-like RVV LS channel estimation
     estimate_channel_ls_average_rvv_simd_like();
-
-    // Computation Stage 2: RVV element-wise LMMSE equalization
     equalize_lmmse_rvv();
 
     float h_mse = compute_channel_mse();

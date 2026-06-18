@@ -1,23 +1,23 @@
 # CA Final Project Part 4
 
-## 主題
+## Scope
 
-Part 4 的正式方向為：
+Part 4 covers the CUDA single-pattern version of the same OFDM pipeline:
 
 ```text
 CUDA SIMT LS Channel Estimation + CUDA LMMSE Equalization
 ```
 
-目前 Part 4 處理的是：
+Current scope:
 
 - `single OFDM input pattern`
 - 讀取同一份 `../data/ofdm_input.bin`
 - 不使用 multi-pattern batching
 - 不使用 2D grid
 
-這與 Part 5 的 multi-pattern GPU parallelism 明確分開。
+Part 5 is still reserved for multi-pattern GPU parallelism.
 
-## 課程要求對應
+## Requirement Mapping
 
 根據 [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)，Part 4 需要：
 
@@ -29,7 +29,7 @@ CUDA SIMT LS Channel Estimation + CUDA LMMSE Equalization
 - 產生 PTX
 - 觀察 PTXAS 與 `ncu --set basic`
 
-目前實作已對應以上要求。
+The current source and result files provide evidence for each item above.
 
 ## Kernel 設計
 
@@ -113,7 +113,7 @@ make profile
 Verification = PASS
 ```
 
-## PTXAS 初步觀察
+## PTXAS Evidence
 
 以 `TPB_LS=256`、`TPB_EQ=256` 為例：
 
@@ -130,15 +130,13 @@ Verification = PASS
   - `0 spill stores`
   - `0 spill loads`
 
-這表示 shared-memory reduction 版本不只在演算法上更平行，也比 serial baseline 更省 register。
+The shared kernel uses fewer registers than the serial Stage 1 baseline in this build.
 
-## PTX 初步觀察
+## PTX Evidence
 
 已保存：
 
 - [part4/results/main_shared_256_256.ptx](/home/york/ca_final_project/part4/results/main_shared_256_256.ptx)
-
-初步觀察：
 
 - LS shared kernel 可見：
   - `extern .shared`
@@ -150,18 +148,16 @@ Verification = PASS
   - `st.global`
   - FP multiply / add / divide
 
-因此目前 PTX 行為與設計預期一致：
+- Stage 1 PTX shows shared-memory traffic and barriers.
+- Stage 2 PTX is dominated by global-memory access and floating-point arithmetic.
 
-- Stage 1 是 shared-memory cooperative reduction
-- Stage 2 是 memory-heavy element-wise kernel
-
-## Nsight Compute 初步觀察
+## Nsight Compute Evidence
 
 已保存：
 
 - [part4/results/ncu_shared_256_256.txt](/home/york/ca_final_project/part4/results/ncu_shared_256_256.txt)
 
-在 `TPB_LS=256`、`TPB_EQ=256`、shared LS 模式下，代表性觀察如下：
+The file below was collected with `TPB_LS=256`, `TPB_EQ=256`, and `shared` LS mode:
 
 ### LS shared kernel
 
@@ -182,15 +178,16 @@ Verification = PASS
 - `Registers Per Thread` = `21`
 - `Dynamic Shared Memory Per Block` = `0`
 - `Waves Per SM` = `5.69`
-- `Achieved Occupancy` 約 `104.46%`（NCU 報表值）
+- `Achieved Occupancy` 約 `104.46%`（NCU 報表值；不拿這個值當主要結論）
 - `Achieved Active Warps Per SM` 約 `50.14`
 
-初步解讀：
+Interpretation:
 
-- Stage 1 的 shared LS kernel 屬於 shared-memory reduction workload
-- Stage 2 的 LMMSE kernel 更接近 memory-bound
+- Stage 1 looks like a block-cooperative shared-memory reduction.
+- Stage 2 is closer to a memory-bound kernel.
+- The `Achieved Occupancy > 100%` line is treated as a profiling anomaly, not as evidence that physical occupancy exceeded the hardware limit.
 
-## TPB Sweep 結果
+## TPB Sweep Results
 
 完整表已保存：
 
@@ -204,7 +201,7 @@ Verification = PASS
 | `ls_shared_128` | `128` | `256` | `shared` | `0.017576` | `0.038370` |
 | `ls_shared_256` | `256` | `256` | `shared` | `0.018781` | `0.052552` |
 
-目前在這組 sweep 中，`TPB_LS=128` 的 pipeline time 最佳。
+In this sweep, `TPB_LS=128` gives the lowest pipeline kernel time.
 
 ### LMMSE kernel sweep
 
@@ -214,7 +211,7 @@ Verification = PASS
 | `eq_shared_256` | `256` | `256` | `shared` | `0.037985` | `0.069458` |
 | `eq_shared_512` | `256` | `512` | `shared` | `0.021407` | `0.043108` |
 
-目前這組 sweep 中，`TPB_EQ=512` 的 pipeline time 最佳。
+In this sweep, `TPB_EQ=512` gives the lowest pipeline kernel time.
 
 ## Shared vs Serial
 
@@ -223,14 +220,15 @@ Verification = PASS
 | `ls_shared_256` | `shared` | `0.018781` | `0.052552` | `PASS` |
 | `ls_serial_256` | `serial` | `0.136742` | `0.133509` | `PASS` |
 
-初步解讀：
+## Shared vs Serial Interpretation
 
-- shared-memory LS reduction 約比 serial LS baseline 快很多
-- 目前這個差距是 Part 4 最直接、也最符合題目要求的 shared-memory 證據
+- The shared version is a block-cooperative reduction with `__shared__`.
+- The serial version is a one-thread-per-subcarrier baseline.
+- The timing gap measures the combined effect of the parallel reduction mapping and shared-memory cooperation. It should not be reduced to "shared memory alone."
 
-## 目前結論
+## Current State
 
-截至目前為止，Part 4 已經完成：
+Completed in the current repository:
 
 - single-pattern CUDA SIMT pipeline
 - shared-memory LS reduction kernel
@@ -241,7 +239,7 @@ Verification = PASS
 - shared vs serial LS comparison
 - PTXAS / PTX / NCU 初步分析材料
 
-目前尚未做的則是：
+Still left for later work:
 
 - 更完整的 TPB search
 - 更完整的 NCU 報告整理

@@ -1,18 +1,15 @@
 # CA Final Project Part 2
 
-## 主題
+## Scope
 
-Part 2 的正式主題為：
+Part 2 keeps the same OFDM workload and changes the mapping:
 
 ```text
 LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 ```
 
-Part 2 對應的實作是：
-
 ```text
-RVV Reduction LS Channel Estimation
-+ RVV LMMSE Equalization
+RVV Reduction LS Channel Estimation + RVV LMMSE Equalization
 ```
 
 ---
@@ -33,7 +30,7 @@ RVV Reduction LS Channel Estimation
 + RVV LMMSE Equalization
 ```
 
-因此 Part 2 不只是把 channel estimation 改成 RVV reduction，也同時把 equalization 改成 RVV element-wise vectorization。
+Stage 1 uses RVV reduction. Stage 2 uses RVV element-wise vectorization.
 
 ---
 
@@ -62,7 +59,7 @@ vector lanes -> different pilot observations p for the same subcarrier k
 reduction    -> sum over p
 ```
 
-這正好對應題目對 Part 2 的要求：必須使用 vector reduction operation。
+This stage is where the required vector reduction appears.
 
 ---
 
@@ -86,15 +83,13 @@ NOISE_VAR = complex noise power sigma_n^2
 NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
 ```
 
-因此 Part 2 的正式 LMMSE equalizer 使用較標準的 normalized denominator。
-
 ### CA mapping
 
 ```text
 vector lanes -> different subcarriers k for the same data symbol s
 ```
 
-因此 Part 2 同時展示兩類平行化：
+Part 2 contains two different mappings:
 
 - reduction parallelism
 - element-wise data parallelism
@@ -123,7 +118,7 @@ vector lanes -> different subcarriers k for the same data symbol s
 
 ---
 
-## 驗證指標
+## Verification
 
 Part 2 與 Part 1 使用相同的正式驗證量：
 
@@ -146,7 +141,7 @@ checksum != 0
 
 ## 結果紀錄
 
-### Correctness
+### Evidence
 
 本次 Part 2 輸出：
 
@@ -159,12 +154,9 @@ checksum != 0
 | `checksum` | `584.37054443` |
 | `Verification` | `PASS` |
 
-這表示：
-
-- RVV reduction LS channel estimation 與 scalar 版本維持相同正確性
-- RVV LMMSE equalization 也維持正確
-- checksum 僅有極小的 floating-point rounding 差異
-- `objdump` 可見 `vfredusum.vs` 與 `vfdiv.vv / vse32.v`，表示兩個 stages 都確實使用 RVV 指令
+- `objdump` shows `vfredusum.vs` in Stage 1.
+- `objdump` shows `vfdiv.vv` and `vse32.v` in Stage 2.
+- The checksum difference from Part 1 stays at floating-point rounding scale.
 
 ### gem5 stats
 
@@ -183,7 +175,7 @@ checksum != 0
 | `I-cache misses` | `928` |
 | `I-cache miss rate` | `0.000071` |
 
-### 與 Part 1 比較
+### gem5 Comparison Against Part 1
 
 | Metric | Part 1 Scalar | Part 2 RVV | Change |
 | --- | --- | --- | --- |
@@ -195,26 +187,7 @@ checksum != 0
 | `D-cache miss rate` | `0.114745` | `0.170969` | `+48.95%` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `+54.35%` |
 
-初步解讀：
+### Interpretation
 
-- Part 2 在正式 workload 下優於 Part 1
-- Stage 1 的 RVV reduction 與 Stage 2 的 RVV LMMSE equalization 一起帶來整體加速
-- 雖然 CPI 與 cache miss rate 上升，但 instruction count 大幅下降，因此總 cycles 與 simulated time 仍明顯改善
-
----
-
-## 結論
-
-Part 2 的正式定位是：
-
-```text
-RVV Reduction LS Channel Estimation
-+ RVV LMMSE Equalization
-```
-
-其中：
-
-- Stage 1 用來滿足 Part 2 的 vector reduction requirement
-- Stage 2 用來展示 MMSE/LMMSE equalizer 的 RVV acceleration
-
-這比「只加速 channel estimation 的 weighted sum」更完整，也更貼近本專題真正的目標。
+- `simSeconds`, `simInsts`, and `numCycles` all drop relative to Part 1.
+- CPI and miss rate increase, but the instruction-count reduction is larger than the CPI penalty.

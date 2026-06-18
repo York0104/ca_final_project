@@ -5,22 +5,9 @@
 #include "../common/ofdm_io.h"
 #include "../common/ofdm_verify.h"
 
-// ============================================================
-// Computation Stage 1 - RVV Reduction LS Channel Estimation
-//
-// CA mapping:
-//   Vector lanes cover different pilot observations p for the same k.
-//   vfredusum.vs is used to reduce vector lanes into one Hhat[k].
-
-
-// Hhat_r[k] = Σ_p Ypilot_r[k,p] * pilot_w[p]
-// Hhat_i[k] = Σ_p Ypilot_i[k,p] * pilot_w[p]
-// f(ai[1], bi[1]) + f(ai[2], bi[2]) + ... + f(ai[n], bi[n])
-
-// a[p] = Ypilot[k,p]
-// b[p] = pilot_w[p]
-// f(a,b) = a * b
-// ============================================================
+// Stage 1: RVV reduction for LS channel estimation.
+// Lanes map to different pilot observations for one subcarrier k, and
+// vfredusum.vs reduces the vector products to one Hhat[k].
 static inline float rvv_dot_product_reduction_f32(const float *a,
                                                   const float *b,
                                                   int n){
@@ -69,13 +56,8 @@ static void estimate_channel_ls_average_rvv_reduction(){
     }
 }
 
-// ============================================================
-// Computation Stage 2 - RVV Element-wise LMMSE Equalization
-//
-// CA mapping:
-//   Vector lanes cover different subcarriers k for the same data symbol s.
-//   No reduction is needed because each lane produces one Xmmse[s][k].
-// ============================================================
+// Stage 2: RVV element-wise LMMSE equalization.
+// Lanes map to adjacent subcarriers k for one data symbol s.
 static void equalize_lmmse_rvv(){
 #if OFDM_HAS_RVV
     const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
@@ -153,10 +135,7 @@ static void equalize_lmmse_rvv(){
 int main(){
     load_input_binary("../data/ofdm_input.bin");
 
-    // Computation Stage 1: RVV reduction LS channel estimation
     estimate_channel_ls_average_rvv_reduction();
-
-    // Computation Stage 2: RVV element-wise LMMSE equalization
     equalize_lmmse_rvv();
 
     float h_mse = compute_channel_mse();
