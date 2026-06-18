@@ -48,7 +48,7 @@ static inline float compute_lmmse_mse(){
     return acc / static_cast<float>(TOTAL_DATA);
 }
 
-// 等化後比等化前好&channel estimation 沒有明顯錯誤&output 不為空
+// 等化後比等化前好 & channel estimation 沒有明顯錯誤 & output 不為 null
 static inline float checksum_lmmse_results(){
     float sum = 0.0f;
 

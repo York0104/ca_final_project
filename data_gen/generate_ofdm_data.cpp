@@ -21,6 +21,7 @@ alignas(64) static float ydata_i[TOTAL_DATA];
 static mt19937 rng(12345);
 static normal_distribution<float> awgn_dist(0.0f, NOISE_STD);
 
+// Gaussian noise：n∼N(0,NOISE_STD^2)
 static inline float awgn_noise(){
     return awgn_dist(rng);
 }
@@ -30,6 +31,7 @@ int main(int argc, char **argv){
 
     init_reference_channel(htrue_r, htrue_i);
 
+    // w[p]=1/256 for all p
     for (int p = 0; p < NUM_PILOTS; ++p){
         pilot_w_local[p] = 1.0f / static_cast<float>(NUM_PILOTS);
     }
@@ -42,6 +44,7 @@ int main(int argc, char **argv){
         }
     }
 
+    // QPSK data & received data
     for (int s = 0; s < NUM_DATA_SYMBOLS; ++s){
         for (int k = 0; k < NUM_SUBCARRIERS; ++k){
             int idx = data_index(s, k);
@@ -49,9 +52,13 @@ int main(int argc, char **argv){
             float xr, xi;
             float yr, yi;
 
+            // generate transmitted QPSK
             make_qpsk_symbol(s, k, &xr, &xi);
+
+            // +channel
             complex_mul(htrue_r[k], htrue_i[k], xr, xi, &yr, &yi);
 
+            // +AWGN
             xdata_r[idx] = xr;
             xdata_i[idx] = xi;
             ydata_r[idx] = yr + awgn_noise();

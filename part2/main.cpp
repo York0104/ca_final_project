@@ -8,15 +8,15 @@
 // Stage 1: RVV reduction for LS channel estimation.
 // Lanes map to different pilot observations for one subcarrier k, and
 // vfredusum.vs reduces the vector products to one Hhat[k].
-static inline float rvv_dot_product_reduction_f32(const float *a,
-                                                  const float *b,
-                                                  int n){
+static inline float rvv_dot_product_reduction_f32(const float *a, const float *b, int n){
+    // a = yr = Ypilot_r[k][0...255]
+    // b = pilot_w[0...255]
+    // n = NUM_PILOTS = 256
     float total = 0.0f;
     int remaining = n;
 
-    while (remaining > 0)
-    {
-        int vl = 0;
+    while (remaining > 0){
+        int vl = 0; // vsetvli 回填「實際處理多少」
         float partial = 0.0f;
 
         asm volatile(
@@ -34,7 +34,7 @@ static inline float rvv_dot_product_reduction_f32(const float *a,
               [remaining] "r"(remaining),
               [partial] "r"(&partial)
             : "ft0", "memory"
-        );
+        ); // result = sum(a[i] * b[i]) for i in [0, vl-1]
 
         total += partial;
         a += vl;
@@ -46,8 +46,7 @@ static inline float rvv_dot_product_reduction_f32(const float *a,
 }
 
 static void estimate_channel_ls_average_rvv_reduction(){
-    for (int k = 0; k < NUM_SUBCARRIERS; ++k)
-    {
+    for (int k = 0; k < NUM_SUBCARRIERS; ++k){
         const float *yr = &Ypilot_r[pilot_index(k, 0)];
         const float *yi = &Ypilot_i[pilot_index(k, 0)];
 
@@ -62,12 +61,10 @@ static void equalize_lmmse_rvv(){
 #if OFDM_HAS_RVV
     const float noise_bias = NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
 
-    for (int s = 0; s < NUM_DATA_SYMBOLS; ++s)
-    {
+    for (int s = 0; s < NUM_DATA_SYMBOLS; ++s){
         int k = 0;
 
-        while (k < NUM_SUBCARRIERS)
-        {
+        while (k < NUM_SUBCARRIERS){
             int remaining = NUM_SUBCARRIERS - k;
             int vl = 0;
 
@@ -113,10 +110,8 @@ static void equalize_lmmse_rvv(){
         }
     }
 #else
-    for (int s = 0; s < NUM_DATA_SYMBOLS; ++s)
-    {
-        for (int k = 0; k < NUM_SUBCARRIERS; ++k)
-        {
+    for (int s = 0; s < NUM_DATA_SYMBOLS; ++s){
+        for (int k = 0; k < NUM_SUBCARRIERS; ++k){
             int idx = data_index(s, k);
             float yr = Ydata_r[idx];
             float yi = Ydata_i[idx];
