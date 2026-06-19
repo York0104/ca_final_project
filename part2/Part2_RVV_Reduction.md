@@ -1,6 +1,6 @@
 # CA Final Project Part 2
 
-## Scope
+
 
 Part 2 keeps the same OFDM workload and changes the mapping:
 
@@ -28,7 +28,8 @@ Part 2：
 RVV Reduction LS Channel Estimation + RVV LMMSE Equalization
 ```
 
-Stage 1 uses RVV reduction. Stage 2 uses RVV element-wise vectorization.
+* Stage 1 uses RVV reduction.
+* Stage 2 uses RVV element-wise vectorization.
 
 ---
 
@@ -36,7 +37,7 @@ Stage 1 uses RVV reduction. Stage 2 uses RVV element-wise vectorization.
 
 ### RVV Reduction LS Channel Estimation
 
-數學形式仍然與 Part 1 相同：
+數學與 Part 1 相同：
 
 ```text
 Hhat[k] = sum_p Y_pilot[p,k] * w[p]
@@ -69,7 +70,7 @@ Part 2 的第二段主要計算為：
 Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k]) / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
 ```
 
-這段不做 reduction，而是沿著 subcarrier `k` 做 unit-stride RVV element-wise vectorization。
+這段沿著 subcarrier `k` 做 unit-stride RVV element-wise vectorization。
 
 其中：
 

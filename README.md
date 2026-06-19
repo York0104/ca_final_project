@@ -1,108 +1,99 @@
 # CA Final Project
 
-This repository contains a Computer Architecture final project built around:
+本 repo 的CA期末專題設計：
 
 ```text
 LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 ```
 
-The workload is a pilot-based OFDM receiver with two computation stages:
+整體 workload 為 pilot-based OFDM receiver，含兩個主要 computation stages：
 
 1. LS channel estimation
-2. One-tap LMMSE equalization
+2. one-tap LMMSE equalization
 
-## Status
+## 目前完成狀態
 
-Currently implemented:
+- `Part 1`：Scalar baseline
+- `Part 2`：RVV vector reduction
+- `Part 3`：SIMD-like RVV parallelization
+- `Part 4`：CUDA SIMT single-pattern implementation
+- `Part 5`：Multi-pattern GPU parallelism
 
-- `Part 1` — Scalar baseline
-- `Part 2` — RVV vector reduction
-- `Part 3` — SIMD-like RVV parallelization
-- `Part 4` — CUDA SIMT single-pattern implementation
-- `Part 5` — Multi-pattern GPU parallelism
-
-## Repository Structure
+## Repository 結構
 
 ```text
-common/      Shared parameters, data, I/O, model, verification
-data_gen/    Host-side OFDM input generator
-data/        Generated binary input
+common/      共用參數、資料、I/O、model與驗證
+data_gen/    Host 端 OFDM 輸入產生器
+data/        產生出的 binary input
 part1/       Scalar baseline
 part2/       RVV reduction implementation
 part3/       SIMD-like RVV implementation
-part4/       CUDA SIMT implementation and experiment scripts
-part5/       Multi-pattern CUDA implementation and experiment scripts
-reference/   Course references and PDFs
-docs/        Audit / supplementary notes
-report.md    Report draft content
+part4/       CUDA SIMT implementation 與Shell script
+part5/       Multi-pattern CUDA implementation 與Shell script
+reference/   參考資料
+figures/     實驗圖表
 ```
 
-## Mathematical Model
+## 數學模型
 
-Pilot model:
+### Pilot model
 
 ```text
 X_pilot[p,k] = 1 + j0
 Y_pilot[p,k] = H[k] + N_pilot[p,k]
 ```
 
-LS channel estimation:
+### LS channel estimation
 
 ```text
 Hhat[k] = sum_p Y_pilot[p,k] * w[p]
 w[p] = 1 / P
 ```
 
-Data model:
+### Data model
 
 ```text
 Y_data[s,k] = H[k] * X_data[s,k] + N_data[s,k]
 ```
 
-LMMSE equalizer:
+### LMMSE equalizer
 
 ```text
 Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
              / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
 ```
 
-## Build and Run
+## 建置與執行
 
-All commands below assume you start from the repository root:
+從 repository root 開始：
 
 ```bash
-cd /home/york/ca_final_project
+cd [your repo]
 ```
 
-### Environment Requirements
+### 環境需求
 
-For `Part 1` to `Part 3` you need:
+`Part 1` 到 `Part 3` 需要：
 
-- Docker with the gem5 / RVV image from the course material, or an equivalent environment that provides:
-  - `g++`
-  - `riscv64-linux-gnu-g++`
-  - gem5 at `/root/gem5/build/RISCV/gem5.opt`
+- Docker 搭配課程使用的 gem5 / RVV image
 
-For `Part 4` and `Part 5` you need:
+`Part 4` 與 `Part 5` 需要：
 
-- an NVIDIA GPU with a CUDA-capable driver
-- Docker with the CUDA image from the course material, or an equivalent environment that provides:
-  - `nvcc`
-  - `ncu`
-  - GPU access inside the container
+- 支援 CUDA 的 NVIDIA GPU
+- Docker 搭配課程使用的 CUDA image
 
-The checked-in Markdown files summarize the current saved runs in this repository, but rebuilding and rerunning still requires the environments above.
+
 
 ### Part 1
 
-Host correctness check:
+Host correctness check：
 
 ```bash
 make -C part1 clean
 make -C part1 host
 ```
 
-gem5 run:
+gem5 run：
 
 ```bash
 make -C part1 clean
@@ -123,14 +114,14 @@ make -C part3 clean
 make -C part3
 ```
 
-Each `make` run:
+每次 `make` 會：
 
-- regenerates `data/ofdm_input.bin` on the host
-- cross-compiles the target program
-- runs gem5 with `TimingSimpleCPU`
-- prints key stats from `m5out/stats.txt`
+- 在 host 端重新產生 `data/ofdm_input.bin`
+- cross-compile 目標程式
+- 在 gem5 `TimingSimpleCPU` 設定下執行
+- 印出 `m5out/stats.txt` 中的重要統計
 
-Current gem5 output directories:
+gem5 輸出目錄：
 
 - `part1/m5out/`
 - `part2/m5out/`
@@ -144,7 +135,7 @@ make -C part4
 make -C part4 run
 ```
 
-Extra commands:
+其他：
 
 ```bash
 make -C part4 ptx
@@ -152,7 +143,7 @@ make -C part4 profile
 make -C part4 sweep
 ```
 
-Current Part 4 result directory:
+Part 4 結果目錄：
 
 - `part4/results/`
 
@@ -164,13 +155,13 @@ make -C part5
 make -C part5 run
 ```
 
-Optional CPU baseline:
+CPU baseline：
 
 ```bash
 make -C part5 run_cpu
 ```
 
-Extra commands:
+其他常用指令：
 
 ```bash
 make -C part5 ptx
@@ -178,25 +169,12 @@ make -C part5 profile
 make -C part5 sweep
 ```
 
-Current Part 5 result directory:
+Part 5 結果目錄：
 
 - `part5/results/`
 
-## Cleaning Old Results
 
-Remove build outputs and regenerateable logs:
-
-```bash
-make -C part1 clean
-make -C part2 clean
-make -C part3 clean
-make -C part4 clean
-make -C part5 clean
-```
-
-The checked-in `m5out/` and `results/` folders contain the current saved measured outputs. They are report artifacts, not source code.
-
-## gem5 Results
+## gem5 結果
 
 | Metric | Part 1 | Part 2 | Part 3 |
 | --- | --- | --- | --- |
@@ -208,87 +186,89 @@ The checked-in `m5out/` and `results/` folders contain the current saved measure
 | `D-cache miss rate` | `0.114745` | `0.170969` | `0.229838` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
 
-Interpretation:
+註：
 
-- `Part 2` has the lowest `simSeconds` and `numCycles` in the current gem5 runs.
-- `Part 3` keeps the required across-`k` SIMD-like mapping, but the strided `vlse32.v` path raises the miss rate and cycle count.
+- `Part 2` 在目前 gem5 結果中有最低的 `simSeconds` 與 `numCycles`
+- `Part 3` 維持題目要求的 across-`k` SIMD-like mapping，但 `vlse32.v` 的 strided access 讓 miss rate 與 cycle count 上升
 
-## Verification
+## CUDA 結果
 
-All implemented parts currently pass:
+`Part 4` 與 `Part 5` 使用的是 GPU kernel-only timing，來源為 `cudaEvent`。
+這些數字不包含 input loading、allocation、H2D/D2H copy 與 host-side verification，
+因此不直接和上面的 gem5 `simSeconds` 比較。
 
-```text
-Verification = PASS
-```
+### Part 4
 
-The shared validation checks:
+預設 case 為 `TPB_LS=256`、`TPB_EQ=256`、`LS_KERNEL_MODE=shared`：
 
-- `H_MSE`
-- `MSE_RX_BEFORE_EQ`
-- `MSE_LMMSE`
-- `checksum`
+| Metric | 數值 |
+| --- | --- |
+| `Verification` | `PASS` |
+| `H_MSE` | `0.00001250` |
+| `MSE_LMMSE` | `0.00681053` |
+| `LS_KERNEL_MS` | `0.023186` |
+| `LMMSE_KERNEL_MS` | `0.024146` |
+| `PIPELINE_KERNEL_MS` | `0.044678` |
 
-For `Part 1` to `Part 3`, these values are printed by the executable itself and recorded in the checked-in Markdown summaries.
+Part 4 的 sweep 結果顯示：
 
-For `Part 4` and `Part 5`, the checked-in `results/*_run.txt` logs include the same functional checks together with GPU timing output.
+- LS shared reduction 的最佳 pipeline time 出現在 `TPB_LS=128`，為 `0.039000 ms`
+- LMMSE sweep 中最低 pipeline time 出現在 `TPB_EQ=512`，為 `0.034696 ms`
+- shared LS 與 one-thread-per-subcarrier serial LS 相比，`TPB_LS=256` case 的 pipeline time 從 `0.118535 ms` 降到 `0.043345 ms`
 
-## Environment Notes
+### Part 5
+
+預設 multi-pattern case 為 `NUM_PATTERNS=16`、`TPB_LS=256`、`TPB_EQ=256`：
+
+| Metric | GPU | CPU baseline |
+| --- | --- | --- |
+| `Verification` | `PASS` | `PASS` |
+| `H_MSE` | `0.00001289` | `0.00001289` |
+| `MSE_LMMSE` | `0.00682142` | `0.00682142` |
+| `PIPELINE_MS` | `0.434780` | `12.268151` |
+
+以這組 `16 patterns` 的預設量測來看，GPU kernel-only pipeline time 約為 CPU baseline 的 `28.22x` 加速。
+
+Pattern sweep：
+
+| `NUM_PATTERNS` | `PIPELINE_KERNEL_MS` | `ms / pattern` |
+| --- | --- | --- |
+| `1` | `0.069048` | `0.069048` |
+| `4` | `0.141583` | `0.035396` |
+| `8` | `0.214241` | `0.026780` |
+| `16` | `0.404536` | `0.025284` |
+| `32` | `0.926991` | `0.028968` |
+
+重點：當 pattern 數增加時，GPU 可以同時暴露更多獨立 blocks 與 warps，
+固定 launch / scheduling overhead 也能被更多工作量攤提。
+
+此改善並非線性無限延伸：
+
+- 在 `32 patterns` 時，總時間仍繼續上升
+- per-pattern time 也開始回升
+- 代表資源利用與 memory traffic 的限制開始變明顯
+
+
+## 環境說明
 
 ### RISC-V / gem5
 
-- Uses `riscv64-linux-gnu-g++`
-- Runs under gem5 in Docker
-- `part2/` and `part3/` require RVV-enabled compilation
+- 使用 `riscv64-linux-gnu-g++`
+- 在 Docker 內的 gem5 環境執行
+- `part2/` 與 `part3/` 需要 RVV 編譯設定
 
 ### CUDA
 
-The CUDA environment is already being used for `Part 4` and `Part 5`:
+`Part 4` 與 `Part 5` 使用：
 
-- GPU: `NVIDIA GeForce RTX 3060`
-- Compute Capability: `8.6`
-- CUDA Docker runtime: available
-- `nvcc 12.4`: available
-- `-arch=sm_86`: verified
-- CUDA kernel launch: verified
-- CUDA event timing: verified
-- PTX generation: verified
-- PTXAS resource report: verified
-- `ncu` / Nsight Compute: verified
-- GPU performance counters: verified
-
-Note:
-
-- The host driver reports `CUDA Version 13.0`
-- The project container uses `CUDA Toolkit 12.4.1`
-- This combination is working correctly in the current environment
-
-## Result Files and Figures
-
-Primary report-facing artifacts in the repository:
-
-- `Overall_Results_Analysis.md`
-- `part1/Part1_MMSE.md`
-- `part2/Part2_RVV_Reduction.md`
-- `part3/Part3_SIMD_Like_RVV.md`
-- `part4/Part4_CUDA_SIMT.md`
-- `part5/Part5_Multi_Pattern_GPU.md`
-- `report.md`
-
-Saved raw outputs:
-
-- gem5 stats: `part1/m5out/stats.txt`, `part2/m5out/stats.txt`, `part3/m5out/stats.txt`
-- CUDA run logs: `part4/results/*_run.txt`, `part5/results/*_run.txt`
-- PTXAS / PTX / NCU: `part4/results/`, `part5/results/`
-
-Generated figures:
-
-- `figures/fig_part123_numcycles.svg`
-- `figures/fig_part123_dcache_miss.svg`
-- `figures/fig_part4_tpb_sweep.svg`
-- `figures/fig_part5_pattern_scaling.svg`
-
-Figure regeneration script:
-
-```bash
-python3 tools/generate_figures.py
-```
+- GPU：`NVIDIA GeForce RTX 3060`
+- Compute Capability：`8.6`
+- CUDA Docker runtime：可用
+- `nvcc 12.4`：可用
+- `-arch=sm_86`：已驗證
+- CUDA kernel launch：已驗證
+- CUDA event timing：已驗證
+- PTX generation：已驗證
+- PTXAS resource report：已驗證
+- `ncu` / Nsight Compute：已驗證
+- GPU performance counters：已驗證

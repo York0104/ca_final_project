@@ -1,7 +1,7 @@
 # CA Final Project Part 3
 
 
-Part 3 keeps the same OFDM workload and changes the Stage 1 mapping:
+Part 3 keeps the same OFDM and changes the Stage 1 mapping:
 
 ```text
 LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
@@ -13,7 +13,9 @@ SIMD-like RVV LS Channel Estimation + RVV LMMSE Equalization
 
 ---
 
-## 與 Part 2 的差異
+## 與 Part 2 差異
+
+The main difference from Part 2 is the Stage 1 mapping.
 
 Part 2：
 
@@ -29,7 +31,7 @@ SIMD-like RVV LS channel estimation
 + RVV LMMSE equalization
 ```
 
-The main difference from Part 2 is the Stage 1 mapping.
+
 
 ---
 
@@ -37,20 +39,20 @@ The main difference from Part 2 is the Stage 1 mapping.
 
 ### SIMD-like RVV LS Channel Estimation
 
-數學形式仍是：
+數學形式：
 
 ```text
 Hhat[k] = sum_p Y_pilot[p,k] * w[p]
 ```
 
-但 Part 3 的實作差異：
+ Part 3 差異：
 
 - 不使用 vector reduction
 - 每個 vector lane 對應不同的輸出 subcarrier `k`
 - 對固定的 pilot index `p`，同時更新多個 `Hhat[k]`
-- 每一組實際處理的 lane 數量由 `vsetvli` 在執行時決定；在目前 gem5 的 `VLEN=256`、`SEW=32` 設定下，最多同時處理 8 個 FP32 lane
-- 由於 layout 採用 `pilot_index(k, p) = k * NUM_PILOTS + p`
-  ，所以 across-`k` 的存取需要 strided load
+- 每一組實際處理的 lane 數量由 `vsetvli` 在執行時決定
+  - 在目前 gem5 的 `VLEN=256`、`SEW=32` 設定下，最多同時處理 8 個 FP32 lane
+
 
 ### CA mapping
 
@@ -64,7 +66,7 @@ strided access -> vlse32.v
 
 ### RVV Element-wise LMMSE Equalization
 
-Part 3 的第二段與 Part 2 相同：
+與 Part 2 相同：
 
 ```text
 Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k]) / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
@@ -95,20 +97,7 @@ NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
 - [common/ofdm_io.h](/home/york/ca_final_project/common/ofdm_io.h)
 - [common/ofdm_verify.h](/home/york/ca_final_project/common/ofdm_verify.h)
 
----
 
-## Verification
-
-Part 3 與 Part 1 / Part 2 相同，只保留：
-
-- `H_MSE`
-- `MSE_RX_BEFORE_EQ`
-- `MSE_LMMSE`
-- `checksum`
-
-The printed checks are the same ones used in Parts 1 and 2.
-
----
 
 ## 結果紀錄
 

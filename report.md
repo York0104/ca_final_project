@@ -1,301 +1,264 @@
-> **文件用途：** 本文件為 Computer Architecture Final Project 報告／簡報草稿，目前整理共同 workload、數學模型、實驗環境、驗證方法與 Part 1 scalar baseline，可直接貼到 Notion，再轉為投影片或正式 `Report.pdf`。
->
->
-> **目前 repository 狀態：** GitHub repository 已完成 Part 1～Part 5；本文件整理共同 workload、Part 1～Part 5 的實作證據、量測結果與整體比較，可作為正式報告主稿。
-> 
+# CA Final Project Report
 
-## 1. 研究動機與專題目標
+## 1. 環境
 
-!Conceptual OFDM Receiver Background
+本專題的主題為：
 
-Conceptual OFDM Receiver Background
+```text
+LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
+```
 
-現代處理器會以不同 execution models 利用 parallelism。Scalar processor 一次處理一個資料元素；vector processor 則以多個 vector lanes，在一條 instruction 中處理多筆資料；GPU 進一步使用大量 threads 的 SIMT execution。課程期末專題要求比較 Scalar、RVV Vector Reduction、SIMD-like RVV、CUDA SIMT 與 multi-pattern GPU parallelism 等不同實作方式。
+實作比較五種不同的平行化模型：
 
-期末專題選擇以 pilot-based OFDM receiver 作為加速主題，其主要由兩個互補的 DSP kernels 組成
+| Part | 主要平台 | Stage 1 | Stage 2 |
+| --- | --- | --- | --- |
+| Part 1 | Scalar RISC-V | Scalar LS channel estimation | Scalar LMMSE equalization |
+| Part 2 | RVV | RVV reduction LS channel estimation | RVV LMMSE equalization |
+| Part 3 | RVV | SIMD-like RVV LS channel estimation | RVV LMMSE equalization |
+| Part 4 | CUDA GPU | CUDA shared-memory LS reduction | CUDA LMMSE equalization |
+| Part 5 | CUDA GPU | Multi-pattern CUDA LS reduction | Multi-pattern CUDA LMMSE equalization |
 
-- 第一段： repeated-pilot Least-Squares（LS）Channel Estimation
-    - 具有 nested weighted summation 
-    → 適合 vector reduction
-- 第二段： LMMSE/MMSE-form Equalization
-    - 在不同 data symbols 與 subcarriers 上產生彼此獨立的 outputs
-    → 適合研究 element-wise data-level parallelism。
+實驗環境分成兩類：
 
-本階段的核心重點為：
+### gem5 / RISC-V 環境
 
-> 在完全相同的 OFDM receiver algorithm、OFDM parameters、輸入資料下，Scalar execution、RVV reduction mapping 與 SIMD-like RVV mapping，會如何影響 instruction count、cycle count、simulated execution time 與 memory-access behavior？
-> 
+- Cross compiler：`riscv64-linux-gnu-g++`
+- 模擬器：`gem5`
+- CPU model：`TimingSimpleCPU`
+- Memory：`256 MB`
+- L1 I-cache：`32 kB`, 8-way
+- L1 D-cache：`32 kB`, 8-way
+- Cache line：`32 bytes`
 
-## 2. OFDM Receiver
+### CUDA 環境
 
-目前實作的是簡化但完整的 frequency-domain OFDM receiver ：
+- GPU：`NVIDIA GeForce RTX 3060`
+- Compute Capability：`8.6`
+- Compiler：`nvcc 12.4`
+- CUDA build target：`-arch=sm_86`
+- Profiling tool：`Nsight Compute (ncu --set basic)`
 
-!image.png
+主要編譯設定如下：
 
-系統使用 512 個 subcarriers、每個 subcarrier 256 筆 repeated pilot observations，以及 512 個 OFDM data symbols。
+| 範圍 | 主要編譯設定 |
+| --- | --- |
+| Part 1 | `riscv64-linux-gnu-g++ -static -O2 -std=c++11` |
+| Part 2 / Part 3 | `riscv64-linux-gnu-g++ -static -O2 -std=c++11 -march=rv64gcv -mabi=lp64d` |
+| Part 4 / Part 5 | `nvcc -O2 -std=c++17 -arch=sm_86 -lineinfo -Xptxas -v` |
 
-- 因此，LS stage 需要處理 512 × 256 = 131,072 筆 pilot observations
-- equalization stage 則需要輸出 512 × 512 = 262,144 筆 complex equalized symbols
+題目在 [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf) 中提醒：
 
-| Parameter | Value | 註 |
+1. GPU 型號需要註明。
+2. `gem5 simulated time` 與實際 CPU/GPU runtime 是不同概念，不可直接混用。
+3. 運算結果必須輸出或參與後續驗證，避免被 compiler 移除。
+4. 報告不能只有數據，必須解釋 performance behavior。
+
+本報告遵循這些原則：
+
+- Part 1～3 使用 gem5 simulated statistics。
+- Part 4～5 使用 `cudaEvent` 量測的 GPU kernel-only timing。
+- 兩類數據分開整理，不直接把 `simSeconds` 與 GPU kernel time 放在同一張快慢比較表中。
+
+## 2. 檔案說明
+
+本 repository 的主要結構如下：
+
+| 路徑 | 內容 |
+| --- | --- |
+| `common/` | 共用參數、資料陣列、I/O、模型與驗證函式 |
+| `data_gen/` | 單一 pattern OFDM 輸入產生器 |
+| `data/` | 產生出的 binary input |
+| `part1/` | Scalar baseline |
+| `part2/` | RVV reduction implementation |
+| `part3/` | SIMD-like RVV implementation |
+| `part4/` | Single-pattern CUDA SIMT implementation |
+| `part5/` | Multi-pattern CUDA implementation |
+| `figures/` | 報告圖表 |
+| `reference/` | 作業 PDF、RVV spec 與助教參考資料 |
+
+與實驗直接相關的主要檔案如下：
+
+| 檔案 | 用途 |
+| --- | --- |
+| `data_gen/generate_ofdm_data.cpp` | 產生 `data/ofdm_input.bin` |
+| `part5/generate_ofdm_multi.cpp` | 產生 `data/ofdm_input_multi.bin` |
+| `part1/main.cpp` | Part 1 scalar baseline |
+| `part2/main.cpp` | Part 2 RVV reduction + RVV LMMSE |
+| `part3/main.cpp` | Part 3 SIMD-like RVV + RVV LMMSE |
+| `part4/main.cu` | Part 4 CUDA single-pattern implementation |
+| `part5/main.cu` | Part 5 CUDA multi-pattern implementation |
+| `part5/main_cpu.cpp` | Part 5 CPU baseline |
+| `part1/part2/part3/Makefile` | gem5 / RISC-V build and run flow |
+| `part4/Makefile` | CUDA build, PTX, NCU, sweep |
+| `part5/Makefile` | Multi-pattern CUDA build, PTX, NCU, CPU baseline, sweep |
+
+## 3. 演算法內容
+
+### 3.1 OFDM workload
+
+本專題實作的是 pilot-based OFDM receiver pipeline，包含兩段主要計算：
+
+1. `LS channel estimation`
+2. `one-tap LMMSE equalization`
+
+固定參數如下：
+
+| Parameter | Value | 說明 |
 | --- | --- | --- |
-| `NUM_SUBCARRIERS` | 512 | Frequency-domain subcarriers，index：`k` |
-| `NUM_PILOTS` | 256 | 每個 subcarrier 用於估測 channel coefficient 的 repeated pilots |
-| `NUM_DATA_SYMBOLS` | 512 | OFDM data symbols，index：`s` |
-| `TOTAL_PILOT` | 131,072 | # complex pilot observations  |
-| `TOTAL_DATA` | 262,144 | # complex equalization outputs  |
-| Modulation | QPSK，`±1 ± j1` | Transmitted data symbols |
-| `SYMBOL_POWER` | 2 | Average symbol power |
-| `NOISE_STD` | 0.0404 |  real dimension 的 AWGN standard deviation |
+| `NUM_SUBCARRIERS` | `512` | frequency-domain subcarriers |
+| `NUM_PILOTS` | `256` | 每個 subcarrier 的 repeated pilot observations |
+| `NUM_DATA_SYMBOLS` | `512` | OFDM data symbols |
+| `TOTAL_PILOT` | `131072` | `512 x 256` complex pilot samples |
+| `TOTAL_DATA` | `262144` | `512 x 512` complex equalization outputs |
+| Modulation | `QPSK` | `±1 ± j1` |
+| `SYMBOL_POWER` | `2` | QPSK symbol power |
+| `NOISE_STD` | `0.0404` | AWGN 每個 real dimension 的標準差 |
 
-資料由固定 seed 的 generator 產生，並輸出成共同輸入檔 `data/ofdm_input.bin`。Part 1、Part 2、Part 3 均讀取同一份 channel、pilot observations、transmitted QPSK data、received data 與 noise realization。避免後續效能受到不同 test vectors 的影響。
-
-- Reference channel 包含 controlled deep fades：
-    - 每 64 個 subcarriers 中，前 3 個 subcarriers 的 channel magnitude 設為 `0.20`，其餘為 `1.00`
-- memory layout 為：
-    
-    ```
-    pilot_index(k, p) = k × NUM_PILOTS + p
-    data_index(s, k)  = s × NUM_SUBCARRIERS + k
-    ```
-    
-    - 固定 subcarrier `k` 時，pilot index `p` 方向的資料是 contiguous
-    - 固定 pilot `p`、跨不同 subcarriers `k` 時，資料間距為
-    
-    ```
-    NUM_PILOTS × sizeof(float) = 256 × 4 bytes = 1024 bytes
-    ```
-    
-
-→ Part 2 可利用 unit-stride access；Part 3 則必須處理 strided memory access
-
-## 3. 數學模型
-
-- Pilot symbols 固定為：$X_{\mathrm{pilot}}[p,k] = 1 + j0$
-- Received pilot model 為：$Y_{\mathrm{pilot}}[p,k] = H[k] + N_{\mathrm{pilot}}[p,k]$
-- LS Channel Estimation：
-    
-                                      $\hat{H}[k] =
-    \sum_{p=0}^{P-1}
-    Y_{\mathrm{pilot}}[p,k] \cdot w[p],
-    \qquad
-    w[p] = \frac{1}{P}$
-    
-    ∵ pilot amplitude = 1
-    
-
-- Real 與 imaginary components ：
-    - $\hat{H}_r[k] =
-    \sum_p Y_{\mathrm{pilot},r}[p,k] \cdot w[p]$
-    - $\hat{H}_i[k] =
-    \sum_p Y_{\mathrm{pilot},i}[p,k] \cdot w[p]$
-
-對應 weighted summation ⇒  reduction kernel，符合作業對 Part 1 / Part 2 所要求的形式：
-                                                $f(a_1, b_1) + f(a_2, b_2) + ... + f(a_n, b_n)$
-
-- `f(a,b) = a × b`
-    - `a[p] = Ypilot[k,p]`
-    - `b[p] = pilot_w[p]`
-
-Stage 1  RVV mapping：
-
-```
-Part 2：vector lanes → 同一個 k 的不同 pilot observations p
-        需要 vector reduction 將多個乘積加總為 Hhat[k]
-
-Part 3：vector lanes → 不同 output subcarriers k
-        固定 p，同時更新多個 Hhat[k]
-        不需要 vector reduction，但需要 strided memory access
-```
-
-- OFDM data model 為：$Y_{\mathrm{data}}[s,k] =
-H[k]X_{\mathrm{data}}[s,k] + N_{\mathrm{data}}[s,k]$
-- LMMSE/MMSE-form equalizer：$\hat{X}_{\mathrm{mmse}}[s,k] =
-\frac{
-Y_{\mathrm{data}}[s,k] \cdot \hat{H}^{*}[k]
-}{
-\left|\hat{H}[k]\right|^2 +
-\sigma_n^2 / \sigma_x^2 +
-\epsilon
-}$
-- 其 real-valued implementation ：
-    - $D[k] =
-    \hat{H}_r[k]^2 +
-    \hat{H}_i[k]^2 +
-    \mathrm{NOISE\_VAR\_OVER\_SYMBOL\_POWER} +
-    \epsilon$
-        - `EPSILON` ：避免 denominator 在 deep fade 時過小而造成 numerical instability
-    - $\hat{X}_{r}[s,k] =
-    \frac{
-    Y_r[s,k]\hat{H}_r[k] +
-    Y_i[s,k]\hat{H}_i[k]
-    }{
-    D[k]
-    }$
-    - $\hat{X}_{i}[s,k] =
-    \frac{
-    Y_i[s,k]\hat{H}_r[k] -
-    Y_r[s,k]\hat{H}_i[k]
-    }{
-    D[k]
-    }$
-
- element-wise data-parallel kernel ⇒ 以 RVV 的 unit-stride vector operations 進行加速。
-
-## 4. 實驗環境、工具與驗證方法
-
-本專題使用 Docker 建立可重現的 Linux development environment，使用 `riscv64-linux-gnu-g++` 進行 RISC-V cross-compilation，並以 gem5 模擬 scalar RISC-V 與 RVV execution。課程資料說明 gem5 可用於 architecture research，能量測 timing、instruction details 與 memory-system behavior，並支援 scalar RISC-V 與 RISC-V Vector Extension workloads。
-
-Part 1 的 scalar program 編譯方式為：
-
-```bash
-riscv64-linux-gnu-g++ -static -O2 -std=c++11 main.cpp -o main
-```
-
-gem5 設定使用 `TimingSimpleCPU`、`256 MB` main memory、啟用 caches、`32 kB` 8-way L1 instruction cache、`32 kB` 8-way L1 data cache，以及 `32-byte` cache line：
-
-```bash
-gem5.opt se.py -c ./main \
-  --cpu-type=TimingSimpleCPU \
-  --mem-size=256MB \
-  --caches \
-  --l1i_size=32kB --l1i_assoc=8 \
-  --l1d_size=32kB --l1d_assoc=8 \
-  --cacheline=32
-```
-
-Host-side generator 在 gem5 simulation 之前執行，負責建立共同的 binary input；其執行時間不納入 gem5 measured workload。現有 `simSeconds`、`simInsts` 與 `numCycles` 因此表示：
-
-```
-End-to-end simulated program statistics after input generation
-```
-
-也就是包含 binary input loading、兩個 computation stages、correctness checks、checksum 與結果輸出，但不包含 host-side input generation。這樣的比較對 Part 1～Part 3 是公平的；不過正式報告中應稱為 **end-to-end simulated program statistics**，而不是 pure kernel-only time。
-
-主要 performance metrics 為：
-
-| Metric | 解讀 |
-| --- | --- |
-| `simSeconds` | gem5 回報的 simulated execution time |
-| `simInsts` | simulated instruction count |
-| `numCycles` | total simulated CPU cycles |
-| `CPI` | cycles per instruction |
-| `IPC` | instructions per cycle |
-| L1 miss rate | gem5 觀察到的 memory-access behavior |
-
-所有 Part 共用下列 correctness metrics：
-
-| Metric | 用途 |
-| --- | --- |
-| `H_MSE` | 比較 `Hhat` 與已知 reference channel `Htrue` 的 Mean Squared Error |
-| `MSE_RX_BEFORE_EQ` | received symbols 在 equalization 前相對 transmitted symbols 的誤差 |
-| `MSE_LMMSE` | equalization 後 `Xmmse` 相對 transmitted QPSK data 的誤差 |
-| `checksum` | 確保 `Hhat` 與 `Xmmse` 的運算結果被後續使用，避免 compiler 移除 |
-
-Verification condition 為：
-
-```
-MSE_LMMSE < MSE_RX_BEFORE_EQ
-H_MSE < 0.01
-checksum ≠ 0
-```
-
-## 5. Part 1 — Scalar Baseline
-
-Part 1 是本專題的 formal scalar baseline。它執行與後續 RVV implementations 完全相同的 OFDM LS Channel Estimation 與 one-tap LMMSE equalization algorithm，但所有計算都由 scalar C++ loops 完成。
-
-Stage 1 的 outer loop 掃過 subcarriers `k`，inner loop 掃過 pilots `p`。對固定的 `k`，程式累加 weighted real 與 imaginary pilot observations，得到一個 complex channel estimate `Hhat[k]`：
-
-```cpp
-for (int k = 0; k < NUM_SUBCARRIERS; ++k) {
-    float acc_r = 0.0f;
-    float acc_i = 0.0f;
-
-    for (int p = 0; p < NUM_PILOTS; ++p) {
-        int idx = pilot_index(k, p);
-        float w = pilot_w[p];
-        acc_r += Ypilot_r[idx] * w;
-        acc_i += Ypilot_i[idx] * w;
-    }
-
-    Hhat_r[k] = acc_r;
-    Hhat_i[k] = acc_i;
-}
-```
-
-這個 nested loop 是後續兩種 RVV strategy 的共同 scalar reference：
-
-```
-Part 2：
-inner pilot dimension p → RVV vector lanes
-vfredusum.vs → 將多個 lane products reduction 成 Hhat[k]
-
-Part 3：
-different output subcarriers k → RVV vector lanes
-固定 p，平行更新多個 Hhat[k]
-不使用 reduction，改用 vlse32.v 處理 strided load
-```
-
-Stage 2 對每個 data symbol `s` 與 subcarrier `k` 計算一筆獨立的 complex equalized output，因此具有明確的 data-level parallelism：
-
-```cpp
-float denom = hr * hr + hi * hi
-            + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON;
-
-Xmmse_r[idx] = (yr * hr + yi * hi) / denom;
-Xmmse_i[idx] = (yi * hr - yr * hi) / denom;
-```
-
-Part 1 host correctness 結果如下：
-
-| Metric | Result |
-| --- | --- |
-| `H_MSE` | 0.00001250 |
-| `MSE_RX_BEFORE_EQ` | 0.14093372 |
-| `MSE_LMMSE` | 0.00681053 |
-| `Xmmse[0]` | `1.01242745 + j1.08173215` |
-| `checksum` | 584.37127686 |
-| Verification | PASS |
-
-`MSE_LMMSE` 顯著低於 equalization 前的 `MSE_RX_BEFORE_EQ`，而 `H_MSE` 也遠低於 threshold，因此 Part 1 提供了有效的 functional reference，可用於檢查後續 RVV implementations 是否仍維持相同演算法行為。
-
-Part 1 gem5 baseline 結果如下：
-
-| Metric | Scalar Part 1 |
-| --- | --- |
-| `simSeconds` | 0.069028 |
-| `simInsts` | 17,066,251 |
-| `numCycles` | 138,055,892 |
-| `CPI` | 8.089394 |
-| `IPC` | 0.123619 |
-| `D-cache miss rate` | 0.114745 |
-| `I-cache miss rate` | 0.000046 |
-
-Part 1 不應被描述成「尚未完成的版本」或「只用來陪襯的未最佳化 code」。它的正式角色是後續所有 RVV experiments 的 scalar reference point：它固定了 algorithmic behavior、workload size、memory layout、input data 與 correctness methodology，使 Part 2、Part 3 的差異可以被合理地歸因於 execution mapping 與 memory-access pattern。
-
-## 6. Part 2 — RVV Reduction + RVV LMMSE
-
-Part 2 保持相同的 OFDM workload，改變的是兩段 computation stage 的 execution mapping：
-
-- Stage 1：RVV reduction LS channel estimation
-- Stage 2：RVV element-wise LMMSE equalization
-
-Stage 1 仍然計算：
+資料布局由程式固定為：
 
 ```text
-Hhat[k] = sum_p Y_pilot[p,k] * w[p]
+pilot_index(k, p) = k * NUM_PILOTS + p
+data_index(s, k)  = s * NUM_SUBCARRIERS + k
 ```
 
-但 Part 2 將同一個 subcarrier `k` 的不同 pilot observations `p` 映射到 RVV lanes，並在 lane 內完成乘法後，再使用真正的 vector reduction instruction 將結果加總成一個 `Hhat[k]`。
+這個布局的意義是：
 
-對應的 CA mapping 為：
+- 固定 `k`、沿 `p` 掃描時，pilot data 是 contiguous。
+- 固定 `p`、跨不同 `k` 掃描時，stride 為 `NUM_PILOTS * sizeof(float) = 1024 bytes`。
+
+這個差異直接影響 Part 2 與 Part 3 的 mapping：
+
+- Part 2 適合沿 `p` 做 unit-stride vector reduction。
+- Part 3 若讓 lane 對應不同 `k`，就必須承擔 `vlse32.v` 的 strided access。
+
+### 3.2 數學模型
+
+Pilot symbols 固定為：
 
 ```text
-vector lanes -> different pilot observations p for the same subcarrier k
+X_pilot[k,p] = 1 + j0
+```
+
+Received pilot model：
+
+```text
+Y_pilot[k,p] = H[k] + N_pilot[k,p]
+```
+
+LS channel estimation：
+
+```text
+Hhat[k] = sum_{p=0}^{P-1} Y_pilot[k,p] * w[p]
+w[p] = 1 / P
+```
+
+拆成 real / imaginary arrays：
+
+```text
+Hhat_r[k] = sum_p Ypilot_r[k,p] * w[p]
+Hhat_i[k] = sum_p Ypilot_i[k,p] * w[p]
+```
+
+這一段就是題目在 Part 1 / Part 2 指定的 nested-loop summation form：
+
+```text
+f(a1, b1) + f(a2, b2) + ... + f(an, bn)
+```
+
+在本專題中的對應是：
+
+```text
+f(a, b) = a * b
+a[p] = Y_pilot[k,p]
+b[p] = w[p]
+```
+
+Data model：
+
+```text
+Y_data[s,k] = H[k] * X_data[s,k] + N_data[s,k]
+```
+
+One-tap LMMSE equalizer：
+
+```text
+Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
+             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
+```
+
+其中：
+
+```text
+NOISE_VAR = sigma_n^2
+NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
+```
+
+實作上使用：
+
+```text
+D[k] = Hhat_r[k]^2 + Hhat_i[k]^2
+     + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON
+
+Xmmse_r[s,k] = (Ydata_r[s,k] * Hhat_r[k] + Ydata_i[s,k] * Hhat_i[k]) / D[k]
+Xmmse_i[s,k] = (Ydata_i[s,k] * Hhat_r[k] - Ydata_r[s,k] * Hhat_i[k]) / D[k]
+```
+
+`EPSILON` 的用途是避免 deep fade 時分母過小，造成數值不穩定。
+
+### 3.3 Part 5 的 multi-pattern 延伸
+
+Part 5 並沒有改變單一 OFDM pattern 的數學，而是把同一套運算複製到多個彼此獨立的 patterns。若引入 pattern index `m`，則：
+
+```text
+Hhat[m,k] = sum_p Y_pilot[m,k,p] * w[p]
+
+Xmmse[m,s,k] = Ydata[m,s,k] * conj(Hhat[m,k])
+               / (|Hhat[m,k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
+```
+
+因此 Part 5 的新增平行性不是來自單一 frame 內部，而是來自不同 `m` 之間的獨立性。
+
+## 4. 實現方法
+
+### 4.1 輸入資料與可重現性
+
+Part 1～4 使用相同的單一 pattern 輸入：
+
+- generator：`data_gen/generate_ofdm_data.cpp`
+- binary：`data/ofdm_input.bin`
+
+Part 5 使用 multi-pattern 輸入：
+
+- generator：`part5/generate_ofdm_multi.cpp`
+- binary：`data/ofdm_input_multi.bin`
+
+兩個 generator 都使用固定 seed 與固定參數，因此資料可重現。
+
+### 4.2 Part 1：Scalar baseline
+
+Part 1 是 formal scalar baseline，不使用 RVV 或 CUDA。它保留兩段主要 computation stages：
+
+1. `estimate_channel_ls_average_scalar()`
+2. `equalize_lmmse_scalar()`
+
+Stage 1 的外層迴圈掃過 subcarrier `k`，內層掃過 pilot `p`，形成真正的 nested-loop weighted summation。這讓 Part 1 同時符合：
+
+- 題目要求的非 toy workload
+- nested loops
+- reduction-like arithmetic form
+
+### 4.3 Part 2：RVV reduction + RVV LMMSE
+
+Part 2 的 Stage 1 維持與 Part 1 相同的數學，但把同一個 `k` 的不同 pilot observations `p` 映射到 RVV lanes，再用真正的 vector reduction 指令把結果加總為一個 `Hhat[k]`。
+
+對應 mapping：
+
+```text
+vector lanes -> different p for the same k
 reduction    -> sum over p
 ```
 
-目前程式與反組譯可對應到的關鍵 RVV 指令包括：
+程式與反組譯中的關鍵 RVV 指令證據包括：
 
 - `vsetvli`
 - `vle32.v`
@@ -303,304 +266,381 @@ reduction    -> sum over p
 - `vfredusum.vs`
 - `vfmv.f.s`
 
-Stage 2 則沿著 subcarrier `k` 做 unit-stride RVV element-wise vectorization，維持與 Part 1 相同的數學模型：
+Stage 2 則沿著 subcarrier `k` 做 unit-stride RVV element-wise vectorization。
 
-```text
-Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
-             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
-```
+### 4.4 Part 3：SIMD-like RVV + RVV LMMSE
 
-Part 2 correctness 結果如下：
-
-| Metric | Result |
-| --- | --- |
-| `H_MSE` | 0.00001250 |
-| `MSE_RX_BEFORE_EQ` | 0.14093372 |
-| `MSE_LMMSE` | 0.00681052 |
-| `Xmmse[0]` | `1.01242721 + j1.08173215` |
-| `checksum` | 584.37054443 |
-| Verification | PASS |
-
-Part 2 gem5 結果如下：
-
-| Metric | Part 2 RVV |
-| --- | --- |
-| `simSeconds` | 0.054755 |
-| `simInsts` | 11,395,368 |
-| `numCycles` | 109,510,852 |
-| `CPI` | 9.610092 |
-| `IPC` | 0.104057 |
-| `D-cache miss rate` | 0.170969 |
-| `I-cache miss rate` | 0.000071 |
-
-相較 Part 1，Part 2 的 `simInsts`、`numCycles` 與 `simSeconds` 都下降。雖然 CPI 與 miss rate 上升，但 instruction-count reduction 大於這個代價，因此整體 gem5 end-to-end simulated program statistics 仍然改善。
-
-## 7. Part 3 — SIMD-like RVV + RVV LMMSE
-
-Part 3 的數學工作仍然與 Part 1 相同，但 Stage 1 改成 across-`k` SIMD-like mapping。這也是它和 Part 2 最主要的差異。
-
-Stage 1 的設計重點是：
+Part 3 的 Stage 1 改成 across-`k` SIMD-like mapping。其重點不是 reduction，而是：
 
 - 不使用 vector reduction
-- 每個 vector lane 對應不同的輸出 subcarrier `k`
-- 對固定的 pilot index `p`，同時更新多個 `Hhat[k]`
-- 因為 `pilot_index(k, p) = k * NUM_PILOTS + p`，across-`k` 載入必須用 strided access
+- 每個 lane 對應不同的 output subcarrier `k`
+- 固定 `p`，同時更新多個 `Hhat[k]`
+- 使用 `vlse32.v` 進行 strided load
 
-對應的 CA mapping 為：
+對應 mapping：
 
 ```text
-vector lanes   -> different output subcarriers k
+vector lanes   -> different output k
 no reduction
 strided access -> vlse32.v
 ```
 
-因此 Part 3 的重點證據不是 reduction，而是：
+這與 Part 2 有本質差異：Part 2 的 lanes 代表同一個輸出的不同被加總元素；Part 3 的 lanes 代表多個彼此獨立的輸出。
 
-- binary 可見 `vlse32.v`
-- binary 不含 `vfredusum.vs` 或其他 vector reduction instruction
+### 4.5 Part 4：CUDA SIMT single-pattern
 
-Stage 2 仍然沿著 subcarrier `k` 做 RVV element-wise LMMSE equalization，因此 Stage 2 與 Part 2 相同。
+Part 4 將相同 pipeline 移到 GPU，處理單一 OFDM input pattern。
 
-Part 3 correctness 結果如下：
-
-| Metric | Result |
-| --- | --- |
-| `H_MSE` | 0.00001250 |
-| `MSE_RX_BEFORE_EQ` | 0.14093372 |
-| `MSE_LMMSE` | 0.00681053 |
-| `Xmmse[0]` | `1.01242745 + j1.08173215` |
-| `checksum` | 584.37115479 |
-| Verification | PASS |
-
-Part 3 gem5 結果如下：
-
-| Metric | Part 3 SIMD-like RVV |
-| --- | --- |
-| `simSeconds` | 0.072706 |
-| `simInsts` | 11,208,851 |
-| `numCycles` | 145,412,866 |
-| `CPI` | 12.973001 |
-| `IPC` | 0.077083 |
-| `D-cache miss rate` | 0.229838 |
-| `I-cache miss rate` | 0.000051 |
-
-Part 3 的 `simInsts` 低於 Part 1，但 `numCycles` 與 `simSeconds` 反而更高。這表示 instruction reduction 並沒有直接轉換成 cycle reduction。主要原因是 Stage 1 的 `vlse32.v` strided access 破壞 spatial locality，使 D-cache miss rate 升高到 `0.229838`，進而拉高 CPI。
-
-這個結果不代表 Part 3 寫錯。依照題目在 `CA_Final_Project.pdf` 的要求，Part 3 本來就必須採用 across-`k` SIMD-like mapping、不可使用 reduction，且需要 strided memory access。對目前的資料布局
+Stage 1 kernel：
 
 ```text
-pilot_index(k, p) = k * NUM_PILOTS + p
+ls_channel_estimation_shared_kernel()
 ```
 
-來說，固定 `p`、同時處理多個 `k` 時，Stage 1 的 byte stride 會是：
-
-```text
-NUM_PILOTS * sizeof(float) = 256 * 4 = 1024 bytes
-```
-
-這使得 Part 3 天生比 Part 2 更不利於 cache locality。Part 2 的 reduction path 可以沿著 contiguous pilot dimension `p` 使用 unit-stride load 與 `vfredusum.vs`，而 Part 3 為了符合 no-reduction 題意，必須承擔 strided load 的代價。
-
-這個判斷可以直接對應兩份 reference：
-
-- `reference/CA_Final_Project.pdf`
-  - Part 3 明確要求 `Do NOT use Vector Reduction Operations`
-  - 明確指出 `Strided memory access will be required`
-  - 並以 `vlse32.v`、`vsse32.v` 作為例子
-  - 同時要求比較 Part 1 / Part 2 / Part 3 的 simulation details，並思考為什麼 cycle reduction 與 instruction reduction 不完全相同
-- `reference/riscv-v-spec-1.0.pdf`
-  - `vle32.v` 是 unit-stride vector load
-  - `vlse32.v` 是 strided vector load，stride 以 byte 為單位
-
-因此可以形成完整的證據鏈：題目要求 Part 3 使用 SIMD-like across-`k` mapping 與 strided access；RVV spec 說明 `vlse32.v` 的語意本來就和 contiguous `vle32.v` 不同；而目前 gem5 stats 又顯示 Part 3 的 `D-cache miss rate = 0.229838`、`CPI = 12.973001`，所以即使 `simInsts` 下降，`numCycles` 與 `simSeconds` 仍可能上升。
-
-另外，當前 Part 3 的 Stage 1 會在每個 pilot iteration 中反覆讀寫 partial channel estimates `Hhat[k]`。這種寫法忠實保留了 Part 3 的 SIMD-like accumulation 形式，但也增加了 memory traffic。因此目前觀察到的結果是：instruction count 雖然下降，cache miss rate 與 CPI 卻明顯上升，最後總 cycles 沒有比 Part 1 更好。這正是 Part 3 題目希望比較的 architectural tradeoff，而不是實作錯誤。
-
-## 8. Part 1～Part 3 gem5 正式比較
-
-| Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
-| --- | --- | --- | --- |
-| `simSeconds` | 0.069028 | 0.054755 | 0.072706 |
-| `simInsts` | 17,066,251 | 11,395,368 | 11,208,851 |
-| `numCycles` | 138,055,892 | 109,510,852 | 145,412,866 |
-| `CPI` | 8.089394 | 9.610092 | 12.973001 |
-| `IPC` | 0.123619 | 0.104057 | 0.077083 |
-| `D-cache miss rate` | 0.114745 | 0.170969 | 0.229838 |
-| `I-cache miss rate` | 0.000046 | 0.000071 | 0.000051 |
-
-從目前 gem5 結果來看：
-
-- Part 2 是 Part 1～Part 3 中最快的版本
-- Part 2 相較 Part 1：
-  - `simSeconds` 約下降 `20.68%`
-  - `numCycles` 約下降 `20.68%`
-  - `simInsts` 約下降 `33.23%`
-- Part 3 雖然也降低了 instruction count，但 strided memory access 讓 cache behavior 惡化，最後 `simSeconds` 反而比 Part 1 高約 `5.33%`
-
-這組比較剛好對應作業想看的重點：不同 parallel mapping 不只影響 instruction count，也會改變 memory behavior 與 CPI，因此不能只用「指令變少」來推論「一定更快」。
-
-## 9. Part 4 — CUDA SIMT Single-Pattern Pipeline
-
-Part 4 將相同的 OFDM pipeline 移到 NVIDIA GPU 上，處理單一 OFDM input pattern。這一部分量測的不是 gem5 simulated statistics，而是 GPU kernel-only timing。
-
-Part 4 的兩個 CUDA kernels 為：
-
-- `ls_channel_estimation_shared_kernel()`
-- `lmmse_equalization_kernel()`
-
-Stage 1 的 mapping 為：
+mapping：
 
 - one block -> one subcarrier `k`
 - one thread -> one pilot partial contribution
 - block 內使用 `__shared__` 做 tree reduction
 
-Stage 2 的 mapping 為：
+Stage 2 kernel：
+
+```text
+lmmse_equalization_kernel()
+```
+
+mapping：
 
 - one thread -> one output `Xmmse[s,k]`
 - `idx = blockIdx.x * blockDim.x + threadIdx.x`
 
-也就是說，Part 4 同時滿足：
+Part 4 因此對應題目要求的：
 
-- CUDA SIMT execution model
-- thread/block mapping evidence
-- `__shared__` usage
-- PTX / PTXAS / Nsight Compute analysis
+- CUDA SIMT execution
+- `threadIdx.x / blockIdx.x / blockDim.x`
+- `__shared__`
+- PTX / PTXAS / NCU analysis
 
-Part 4 在目前預設 `TPB_LS=256`、`TPB_EQ=256`、shared Stage 1 模式下，correctness 維持 PASS，且與 Parts 1～3 使用同一組 verification policy。
+### 4.6 Part 5：multi-pattern CUDA
 
-Part 4 的 shared-vs-serial Stage 1 比較如下：
+Part 5 在 Part 4 的基礎上新增 pattern dimension，使用 2D CUDA grid：
+
+Stage 1：
+
+- `blockIdx.x -> subcarrier k`
+- `blockIdx.y -> pattern index`
+- `threadIdx.x -> pilot contributions`
+
+Stage 2：
+
+- `blockIdx.x * blockDim.x + threadIdx.x -> flattened output index inside one pattern`
+- `blockIdx.y -> pattern index`
+
+這與 `reference/CA_Final_Project.pdf` 建議的 2D grid mapping 一致，也使 GPU 同時看到更多獨立 blocks 與 warps。
+
+## 5. 驗證方法與量測口徑
+
+### 5.1 Correctness check
+
+所有 parts 都會輸出以下驗證量：
+
+| Metric | 用途 |
+| --- | --- |
+| `H_MSE` | 驗證 channel estimation |
+| `MSE_RX_BEFORE_EQ` | 未等化前 baseline |
+| `MSE_LMMSE` | 驗證 equalization 成效 |
+| `checksum` | 防止 compiler 移除運算 |
+
+Verification 條件為：
+
+```text
+MSE_LMMSE < MSE_RX_BEFORE_EQ
+H_MSE < 0.01
+checksum != 0
+```
+
+這個設計對應題目提醒：結果必須被輸出或參與後續簡單驗證，避免未使用的運算被最佳化移除。
+
+### 5.2 Performance measurement
+
+Part 1～3 使用 gem5，所以量測的是：
+
+```text
+end-to-end simulated program statistics after input generation
+```
+
+也就是：
+
+- binary input loading
+- computation stages
+- correctness checks
+- checksum
+- 結果輸出
+
+但不包含 host-side input generation。
+
+Part 4～5 使用 `cudaEvent`，量測的是：
+
+```text
+GPU kernel-only timing
+```
+
+不包含：
+
+- input loading
+- allocation / free
+- H2D / D2H copy
+- host-side verification
+
+因此：
+
+- gem5 的 `simSeconds` 不能直接和 GPU `PIPELINE_KERNEL_MS` 比較
+- Part 5 的 CPU baseline 則是同一份 multi-pattern input 的 host wall-clock 參考值
+
+## 6. 模擬結果說明
+
+### 6.1 Part 1～Part 3 gem5 結果
+
+三個版本的 correctness 都通過：
+
+| Part | `H_MSE` | `MSE_RX_BEFORE_EQ` | `MSE_LMMSE` | Verification |
+| --- | --- | --- | --- | --- |
+| Part 1 | `0.00001250` | `0.14093372` | `0.00681053` | `PASS` |
+| Part 2 | `0.00001250` | `0.14093372` | `0.00681052` | `PASS` |
+| Part 3 | `0.00001250` | `0.14093372` | `0.00681053` | `PASS` |
+
+gem5 正式比較表如下：
+
+| Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
+| --- | --- | --- | --- |
+| `simSeconds` | `0.069028` | `0.054755` | `0.072706` |
+| `simInsts` | `17,066,251` | `11,395,368` | `11,208,851` |
+| `numCycles` | `138,055,892` | `109,510,852` | `145,412,866` |
+| `CPI` | `8.089394` | `9.610092` | `12.973001` |
+| `IPC` | `0.123619` | `0.104057` | `0.077083` |
+| `D-cache miss rate` | `0.114745` | `0.170969` | `0.229838` |
+| `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
+
+![Part 1~3 simSeconds](figures/fig_part123_simseconds.svg)
+
+![Part 1~3 numCycles](figures/fig_part123_numcycles.svg)
+
+![Part 1~3 D-cache miss rate](figures/fig_part123_dcache_miss.svg)
+
+觀察如下：
+
+- Part 2 是 Part 1～3 中最快的版本。
+- Part 2 相較 Part 1：
+  - `simSeconds` 下降約 `20.68%`
+  - `numCycles` 下降約 `20.68%`
+  - `simInsts` 下降約 `33.23%`
+- Part 3 雖然 `simInsts` 也下降，但 `simSeconds` 反而比 Part 1 高約 `5.33%`。
+
+這個結果和題目要求的分析方向一致。Part 2 用的是 contiguous pilot dimension 上的 vector reduction，因此能有效減少指令數；Part 3 則必須遵守：
+
+- no reduction
+- across-`k` SIMD-like mapping
+- strided memory access
+
+在目前布局 `pilot_index(k, p) = k * NUM_PILOTS + p` 下，固定 `p`、跨 `k` 的 stride 為 `1024 bytes`。這讓 Part 3 的 `vlse32.v` 載入模式較不利於 spatial locality，因此 `D-cache miss rate` 升到 `0.229838`，`CPI` 也提高到 `12.973001`。因此 Part 3 的結果應解讀為題目想要觀察的 tradeoff，而不是實作失敗。
+
+### 6.2 Part 4 結果
+
+Part 4 的預設 case 為：
+
+```text
+TPB_LS = 256
+TPB_EQ = 256
+LS_KERNEL_MODE = shared
+```
+
+對應 correctness 與 timing：
+
+| Metric | Value |
+| --- | --- |
+| `H_MSE` | `0.00001250` |
+| `MSE_RX_BEFORE_EQ` | `0.14093372` |
+| `MSE_LMMSE` | `0.00681053` |
+| `checksum` | `584.37121582` |
+| `Verification` | `PASS` |
+| `LS_KERNEL_MS` | `0.023186` |
+| `LMMSE_KERNEL_MS` | `0.024146` |
+| `PIPELINE_KERNEL_MS` | `0.044678` |
+
+Part 4 shared-vs-serial Stage 1 比較如下：
 
 | Case | LS Mode | LS ms | Pipeline ms | Verification |
 | --- | --- | --- | --- | --- |
-| `ls_shared_256` | `shared` | 0.017372 | 0.043345 | PASS |
-| `ls_serial_256` | `serial` | 0.135022 | 0.118535 | PASS |
+| `ls_shared_256` | `shared` | `0.017372` | `0.043345` | `PASS` |
+| `ls_serial_256` | `serial` | `0.135022` | `0.118535` | `PASS` |
 
-這裡的 timing gap 應解讀為：
+![Part 4 shared vs serial](figures/fig_part4_shared_vs_serial.svg)
 
-- block-cooperative parallel reduction + shared memory
-- 相對 one-thread-per-subcarrier serial baseline 的整體效果
+Part 4 TPB sweep 摘要：
 
-而不是把所有差距都歸因為 shared memory 本身。
+| Case | `TPB_LS` | `TPB_EQ` | LS Mode | LS ms | LMMSE ms | Pipeline ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ls_shared_64` | `64` | `256` | `shared` | `0.017032` | `0.019973` | `0.040740` |
+| `ls_shared_128` | `128` | `256` | `shared` | `0.015666` | `0.020561` | `0.039000` |
+| `ls_shared_256` | `256` | `256` | `shared` | `0.017372` | `0.020174` | `0.043345` |
+| `eq_shared_128` | `256` | `128` | `shared` | `0.024464` | `0.021142` | `0.062669` |
+| `eq_shared_256` | `256` | `256` | `shared` | `0.023186` | `0.024146` | `0.044678` |
+| `eq_shared_512` | `256` | `512` | `shared` | `0.035142` | `0.021271` | `0.034696` |
 
-Part 4 的 TPB sweep 摘要如下：
+![Part 4 TPB sweep](figures/fig_part4_tpb_sweep.svg)
 
-### LS shared kernel sweep
+這些結果有三個重點：
 
-| Case | TPB_LS | TPB_EQ | LS Mode | LS ms | Pipeline ms |
-| --- | --- | --- | --- | --- | --- |
-| `ls_shared_64` | 64 | 256 | shared | 0.017032 | 0.040740 |
-| `ls_shared_128` | 128 | 256 | shared | 0.015666 | 0.039000 |
-| `ls_shared_256` | 256 | 256 | shared | 0.017372 | 0.043345 |
+1. `__shared__` 的作用是支撐 block-cooperative reduction，而不是單純做快取替代品。
+2. shared LS 相對 serial LS 的差距，應解讀為「平行 reduction + shared memory + 更多可用 threads」的整體效果。
+3. `TPB_LS` 與 `TPB_EQ` 都呈現非單調結果，表示 block size 不存在單純越大越快的規律。
 
-### LMMSE kernel sweep
+PTXAS 與 NCU 的證據也支持這個解讀：
 
-| Case | TPB_LS | TPB_EQ | LS Mode | LMMSE ms | Pipeline ms |
-| --- | --- | --- | --- | --- | --- |
-| `eq_shared_128` | 256 | 128 | shared | 0.021142 | 0.062669 |
-| `eq_shared_256` | 256 | 256 | shared | 0.024146 | 0.044678 |
-| `eq_shared_512` | 256 | 512 | shared | 0.021271 | 0.034696 |
+- Stage 1 shared kernel：`14 registers/thread`，`0 spill`，dynamic shared memory 約 `2.05 KB/block`
+- Stage 2 LMMSE kernel：`21 registers/thread`，`0 spill`
+- NCU 顯示 Stage 1 的 throughput 約落在 `36%` 左右，且伴隨 shared-memory traffic 與 synchronization
+- NCU 顯示 Stage 2 的 memory throughput 約 `79%`，compute throughput 約 `30%`，較接近 memory-heavy kernel
 
-這些結果說明：
+題目要求使用 `PTXAS`、`PTX` 與 `ncu --set basic` 分析；目前 repository 已保留對應材料，且結果與 kernel 設計相符。
 
-- `TPB_LS` 與 `TPB_EQ` 都不是越大越快
-- 單看 LS kernel 與看整體 pipeline，不一定會得到相同的最佳設定
-- 在目前量測中，`TPB_LS=128` 的 pipeline kernel-only time 最低，`TPB_EQ=512` 的 pipeline kernel-only time 也最低
+### 6.3 Part 5 結果
 
-Nsight Compute 與 PTXAS 證據則顯示：
+Part 5 的預設 multi-pattern case 為：
 
-- Stage 1 有 shared-memory traffic 與 synchronization
-- Stage 2 更接近 memory-heavy element-wise kernel
-- Stage 2 的 `Achieved Occupancy > 100%` 應視為 profiling anomaly，不拿來當主要結論
+```text
+NUM_PATTERNS = 16
+TPB_LS = 256
+TPB_EQ = 256
+```
 
-## 10. Part 5 — Multi-Pattern GPU Parallelism
-
-Part 5 將 Part 4 的 single-pattern CUDA pipeline 擴展到多個彼此獨立的 OFDM input patterns。數學模型不變，新增的是 pattern dimension 與 2D grid mapping。
-
-Part 5 的主要映射為：
-
-- Stage 1：
-  - `blockIdx.x -> subcarrier k`
-  - `blockIdx.y -> pattern index`
-  - `threadIdx.x -> pilot contributions`
-- Stage 2：
-  - `blockIdx.x * blockDim.x + threadIdx.x -> flattened output index inside one pattern`
-  - `blockIdx.y -> pattern index`
-
-因此 Part 5 的關鍵不是改變單一 frame 內的運算，而是讓 GPU 同時看到更多獨立 patterns，以增加可同時排程的 blocks 與 warps。
-
-目前預設 `NUM_PATTERNS=16`、`TPB_LS=256`、`TPB_EQ=256` 的 GPU 執行結果如下：
+GPU correctness 與 kernel-only timing：
 
 | Metric | Value |
 | --- | --- |
-| `H_MSE` | 0.00001289 |
-| `MSE_RX_BEFORE_EQ` | 0.14082038 |
-| `MSE_LMMSE` | 0.00682142 |
-| `LS_KERNEL_MS` | 0.128993 |
-| `LMMSE_KERNEL_MS` | 0.308572 |
-| `PIPELINE_KERNEL_MS` | 0.434780 |
-| Verification | PASS |
+| `H_MSE` | `0.00001289` |
+| `MSE_RX_BEFORE_EQ` | `0.14082038` |
+| `MSE_LMMSE` | `0.00682142` |
+| `checksum` | `9294.77246094` |
+| `Verification` | `PASS` |
+| `LS_KERNEL_MS` | `0.128993` |
+| `LMMSE_KERNEL_MS` | `0.308572` |
+| `PIPELINE_KERNEL_MS` | `0.434780` |
 
-同一份 multi-pattern input 的 CPU baseline 結果如下：
+同一份 multi-pattern input 的 CPU baseline：
 
 | Metric | Value |
 | --- | --- |
-| `CPU_PIPELINE_MS` | 12.268151 |
-| `H_MSE` | 0.00001289 |
-| `MSE_LMMSE` | 0.00682142 |
-| `Verification` | PASS |
+| `CPU_PIPELINE_MS` | `12.268151` |
+| `H_MSE` | `0.00001289` |
+| `MSE_LMMSE` | `0.00682142` |
+| `Verification` | `PASS` |
 
-這說明 Part 5 的 GPU 路徑在維持相同演算法與 correctness checks 的前提下，已經能穩定處理 multi-pattern workload。
+以這組 `16 patterns` 的結果來看，GPU kernel-only pipeline time 約為 CPU baseline 的 `28.22x`。
 
-Part 5 pattern sweep 摘要如下：
+Pattern sweep：
 
-| Patterns | Verification | LS ms | LMMSE ms | Pipeline ms |
-| --- | --- | --- | --- | --- |
-| 1 | PASS | 0.032481 | 0.037750 | 0.069048 |
-| 4 | PASS | 0.039578 | 0.117176 | 0.141583 |
-| 8 | PASS | 0.059996 | 0.177853 | 0.214241 |
-| 16 | PASS | 0.086354 | 0.347571 | 0.404536 |
-| 32 | PASS | 0.223770 | 0.745861 | 0.926991 |
+| Patterns | Verification | LS ms | LMMSE ms | Pipeline ms | ms / pattern |
+| --- | --- | --- | --- | --- | --- |
+| `1` | `PASS` | `0.032481` | `0.037750` | `0.069048` | `0.069048` |
+| `4` | `PASS` | `0.039578` | `0.117176` | `0.141583` | `0.035396` |
+| `8` | `PASS` | `0.059996` | `0.177853` | `0.214241` | `0.026780` |
+| `16` | `PASS` | `0.086354` | `0.347571` | `0.404536` | `0.025284` |
+| `32` | `PASS` | `0.223770` | `0.745861` | `0.926991` | `0.028968` |
 
-這組結果不應只看總時間，而要看 pattern-level amortization。隨著 patterns 增加，GPU 看到更多獨立 blocks 與 warps，pipeline time per pattern 下降，這正是 Part 5 想展示的架構重點。
+![Part 5 pattern scaling](figures/fig_part5_pattern_scaling.svg)
 
-## 11. 結論
+這組結果對應題目在 Part 5 提出的核心問題：
 
-目前 repository 的主體工作已經形成一條清楚的比較線：
+- 為什麼 Part 5 比 Part 4 更適合 GPU？
+- pattern 數增加時，performance 是否線性提升？
+- occupancy、latency hiding 與 utilization 會如何變化？
+
+目前結果顯示：
+
+1. 總 pipeline time 隨 patterns 增加而上升，因為總工作量上升。
+2. 但 `ms / pattern` 從 `1 pattern` 的 `0.069048 ms` 下降到 `16 patterns` 的 `0.025284 ms`，顯示固定 launch / scheduling overhead 被更多工作量攤提。
+3. 到 `32 patterns` 時，`ms / pattern` 回升到 `0.028968 ms`，表示 throughput 改善不是無限線性的；當更多 patterns 同時活躍時，memory traffic 與資源利用限制開始變明顯。
+
+NCU 觀察也支持這個結論：
+
+- Stage 1 multi-pattern kernel：`16 registers/thread`、dynamic shared memory 約 `2.05 KB/block`、Achieved Occupancy 約 `89.84%`
+- Stage 2 multi-pattern kernel：`21 registers/thread`、無 dynamic shared memory、Memory Throughput 約 `91.45%`、Achieved Occupancy 約 `83.88%`
+
+這表示 Part 5 的 Stage 2 已接近明顯的 memory-heavy GPU kernel，而 Part 5 的效能提升重點確實來自更多可同時執行的 blocks / warps，而不是單一 pattern latency 被神奇縮短。
+
+## 7. 討論與比較
+
+### 7.1 Part 1～Part 3 的比較
+
+Part 1～Part 3 的價值在於展示三種不同的 RISC-V execution mapping：
 
 - Part 1：scalar nested-loop baseline
-- Part 2：RVV reduction + RVV element-wise equalization
-- Part 3：SIMD-like RVV + strided access + no reduction
-- Part 4：single-pattern CUDA SIMT pipeline
-- Part 5：multi-pattern GPU parallelism
+- Part 2：vector reduction
+- Part 3：SIMD-like lanes over independent outputs
 
-從 Part 1～Part 3 的 gem5 結果來看，Part 2 在目前設定下提供了最佳的 end-to-end simulated program performance；Part 3 雖然保留了 SIMD-like mapping 與 no-reduction requirement，但 strided access 帶來的 memory penalty 抵銷了 instruction-count reduction 的收益。
+Part 2 最快，原因是它把 Stage 1 的 reduction 寫成最符合資料布局的 contiguous vector reduction。Part 3 雖然降低了 instruction count，但題目要求它不得使用 reduction，且需要 strided access；在本 workload 下，這個 mapping 對 cache locality 不利，因此 `simSeconds` 沒有優於 Part 1。
 
-從 Part 4 與 Part 5 的 GPU 結果來看，shared-memory block-cooperative reduction 與大量 thread-level parallelism 能有效支撐 OFDM pipeline，而 multi-pattern mapping 進一步提高了 GPU 可用的獨立工作量，使 Part 5 更能展現 GPU 在 throughput-oriented workload 上的優勢。
+### 7.2 Part 4～Part 5 的比較
 
-## 資料來源與報告引用依據
+Part 4 與 Part 5 的比較重點不是 scalar vs vector，而是：
 
-1. **課程資料：`CA_Final_Project.pdf`**
-    - Project overview：Part 1 Scalar Baseline、Part 2 RVV Vector Reduction、Part 3 SIMD-like RVV Parallelization、Part 4 CUDA SIMT、Part 5 Multi-pattern GPU Parallelism。
-    - Part 1 requirement：演算法需具 computational intensity，且至少一段包含 nested-loop summation。
-    - Part 2 requirement：必須使用 RVV vectors、vector arithmetic 與 Vector Reduction Operations。
-    - Part 3 requirement：使用 across-k SIMD-like mapping、不得使用 reduction，並需使用 strided memory access。
-    - gem5 workflow、metrics 與報告提醒：gem5 simulated time 與實際 CPU/GPU runtime 不可混為一談。
-2. **RISC-V International：`riscv-v-spec-1.0.pdf`**
-    - RVV programmer model：vector registers `v0`～`v31`、`vl`、`vtype`、`vsetvli`。
-    - Vector memory instructions：unit-stride load/store 與 strided load/store。
-    - Vector floating-point instructions：`vfmul.vv`、`vfmacc.vv`、`vfsub.vv`、`vfdiv.vv`。
-    - Vector Reduction Operations：`vfredusum.vs`。
-    - Strip-mining：以 `vsetvli` 和 `remaining` 支援 implementation-dependent vector length。
-3. **目前實作 repository：`York0104/ca_final_project`**
-    - `Overall_Results_Analysis.md`
-    - `part1/Part1_MMSE.md`
-    - `part1/main.cpp`
-    - `part1/Makefile`
-    - `part2/main.cpp`
-    - `part3/main.cpp`
-    - `common/ofdm_params.h`
-    - `common/ofdm_model.h`
-    - `data_gen/generate_ofdm_data.cpp`
+- single-pattern GPU workload
+- multi-pattern GPU workload
 
-> **更新注意事項：** `Overall_Results_Analysis.md` 與 `part3/Part3_SIMD_Like_RVV.md` 已記錄最新 Part 3 結果；若有舊文件仍寫「Part 3 與 Part 1 幾乎相同」，正式報告與簡報應以最新 overall results 為準。
+Part 4 已經顯示 shared-memory reduction 能有效支撐 Stage 1；Part 5 則進一步利用獨立 patterns 之間的平行性，使 GPU 有更多 blocks 與 warps 可同時排程，因此更能展現 throughput-oriented architecture 的優勢。
 
-https://ww2.mathworks.cn/help/lte/ug/channel-estimation.html
+### 7.3 跨 CPU / GPU 的結果解讀限制
+
+本專題不能把所有 parts 的結果合成單一「誰最快」排行榜，因為量測方式不同：
+
+- Part 1～3：gem5 simulated statistics
+- Part 4～5：CUDA kernel-only timing
+
+因此合理的報告方式是：
+
+- 在 gem5 區段比較 Part 1～3
+- 在 CUDA 區段比較 Part 4 與 Part 5
+- 若要提到 CPU baseline，僅在 Part 5 的 multi-pattern runtime 脈絡下解釋 GPU throughput 優勢
+
+## 8. 結論
+
+本專題以同一個 pilot-based OFDM receiver workload，完整比較了 scalar、RVV 與 CUDA 三種不同層次的 parallel execution model。
+
+結論如下：
+
+1. Part 1 提供穩定的 scalar reference，固定了數學模型、輸入資料、驗證方法與 gem5 workflow。
+2. Part 2 透過真正的 `vfredusum.vs` reduction，在目前 gem5 設定下得到最佳的 Part 1～3 performance。
+3. Part 3 雖然使用 SIMD-like RVV mapping，但由於題目要求 no reduction 與 strided access，導致 memory behavior 惡化；這是合理的架構現象，不是實作錯誤。
+4. Part 4 顯示 block-cooperative shared-memory reduction 可有效加速單一 pattern 的 Stage 1，而 Stage 2 更偏向 memory-heavy kernel。
+5. Part 5 進一步利用 multi-pattern parallelism，讓 GPU 同時看到更多獨立 blocks 與 warps，顯示出明顯的 overhead amortization 與 throughput 優勢。
+
+整體來看，這份專題不只是展示「把程式改成向量化或丟到 GPU」，而是把同一個 DSP workload 分別映射到：
+
+- scalar reduction
+- RVV vector reduction
+- SIMD-like RVV strided parallelism
+- CUDA SIMT single-pattern execution
+- CUDA multi-pattern throughput-oriented execution
+
+並透過實測數據說明：不同 parallel mapping 不只改變 instruction count，也會改變 cache locality、occupancy、memory traffic 與整體 performance behavior。
+
+## 9. 參考資料
+
+1. [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)
+   - 作業題意、Part 1～Part 5 的要求
+   - Report 建議章節
+   - gem5 與 GPU 量測提醒
+2. [reference/riscv-v-spec-1.0.pdf](/home/york/ca_final_project/reference/riscv-v-spec-1.0.pdf)
+   - `vsetvli`
+   - unit-stride / strided vector memory access
+   - floating-point vector arithmetic
+   - vector reduction operations
+3. [reference/FP_toy_example/](/home/york/ca_final_project/reference/FP_toy_example)
+   - 助教提供的 build / run / gem5 / CUDA workflow 參考
+4. Repository implementation and logs
+   - [part1/Part1_MMSE.md](/home/york/ca_final_project/part1/Part1_MMSE.md)
+   - [part2/Part2_RVV_Reduction.md](/home/york/ca_final_project/part2/Part2_RVV_Reduction.md)
+   - [part3/Part3_SIMD_Like_RVV.md](/home/york/ca_final_project/part3/Part3_SIMD_Like_RVV.md)
+   - [part4/Part4_CUDA_SIMT.md](/home/york/ca_final_project/part4/Part4_CUDA_SIMT.md)
+   - [part5/Part5_Multi_Pattern_GPU.md](/home/york/ca_final_project/part5/Part5_Multi_Pattern_GPU.md)

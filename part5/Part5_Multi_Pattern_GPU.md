@@ -1,51 +1,40 @@
 # CA Final Project Part 5
 
-## Scope
 
-Part 5 extends the Part 4 CUDA pipeline from one OFDM input pattern to multiple independent patterns.
+Part 5 是將 Part 4 的 CUDA pipeline 從單一 OFDM input pattern 延伸到多個彼此獨立的 patterns。
 
-The mathematical workload stays the same:
+數學維持不變：
+- Stage 1：LS channel estimation
+- Stage 2：one-tap LMMSE equalization
 
-- Stage 1: LS channel estimation
-- Stage 2: one-tap LMMSE equalization
+新增主要在於 pattern dimension 與 GPU mapping。
 
-The new part is the pattern dimension and the GPU mapping around it.
+## Q
 
-## Problem Statement
+前面幾個 parts 都只處理單一 input pattern，而 Part 5 要再利用一層新的平行性：跨多個獨立 patterns 的平行性
 
-The assignment notes that the previous parts process only one input pattern. Part 5 should exploit another level of parallelism:
 
-- parallelism across independent patterns
+根據 [reference/CA_Final_Project.pdf](../reference/CA_Final_Project.pdf)，Part 5 ：
 
-For this project, the concrete question is:
+- 使用 GPU 處理多個 input patterns
+- 利用 independent patterns 之間的平行性
+- 2D CUDA grid 是合理的 mapping 方式
+- 可使用 `blockIdx.y` 當作 pattern index
+- 使用 `nvcc` 編譯
+- 檢查 PTXAS / PTX
+- 使用 `ncu --set basic` 做 profiling
 
-> If Part 4 already parallelizes within one OFDM frame, what changes when we also let the GPU process many OFDM frames at the same time?
-
-## Requirement Mapping
-
-From [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf), the key Part 5 requirements are:
-
-- use the GPU to process multiple input patterns
-- exploit parallelism across independent patterns
-- a 2D CUDA grid is appropriate
-- `blockIdx.y` can be used as the pattern index
-- compile with `nvcc`
-- inspect PTXAS / PTX
-- profile with `ncu --set basic`
-
-## Implementation Mapping
+## 設計
 
 ### Input
 
-Part 5 uses a dedicated multi-pattern binary input file:
+Part 5 使用獨立的 multi-pattern binary input：
 
 ```text
 ../data/ofdm_input_multi.bin
 ```
 
-The generator is:
-
-- [generate_ofdm_multi.cpp](/home/york/ca_final_project/part5/generate_ofdm_multi.cpp)
+generator：[generate_ofdm_multi.cpp](./generate_ofdm_multi.cpp)
 
 ### Stage 1
 
@@ -55,7 +44,7 @@ The generator is:
 - `blockIdx.y -> pattern index`
 - `threadIdx.x -> pilot contributions`
 
-Stage 1 still uses a block-cooperative shared-memory reduction, but the grid now covers both:
+Stage 1 仍是 block-cooperative shared-memory reduction，只是 grid 現在同時覆蓋：
 
 - subcarrier dimension
 - pattern dimension
@@ -64,50 +53,42 @@ Stage 1 still uses a block-cooperative shared-memory reduction, but the grid now
 
 `lmmse_equalization_multi_kernel()`
 
-- `blockIdx.x * blockDim.x + threadIdx.x -> flattened output index inside one pattern`
+- `blockIdx.x * blockDim.x + threadIdx.x -> 單一 pattern 內的 flattened output index`
 - `blockIdx.y -> pattern index`
 
-Each thread still computes one output task. The difference from Part 4 is that many patterns are active together.
+每個 thread 仍然計算一個輸出 task。和 Part 4 的主要差別在於現在會同時有更多 patterns 活躍在 GPU 上。
 
-## Evidence in Code
+## 證據
 
-- CUDA source: [main.cu](/home/york/ca_final_project/part5/main.cu)
-- CPU baseline: [main_cpu.cpp](/home/york/ca_final_project/part5/main_cpu.cpp)
-- Makefile: [Makefile](/home/york/ca_final_project/part5/Makefile)
-- Sweep script: [run_experiments.sh](/home/york/ca_final_project/part5/run_experiments.sh)
+- CUDA source：[main.cu](./main.cu)
+- CPU baseline：[main_cpu.cpp](./main_cpu.cpp)
+- Makefile：[Makefile](.Makefile)
+- sweep script：[run_experiments.sh](./run_experiments.sh)
 
-The core evidence for multi-pattern mapping is:
+multi-pattern mapping 證據：
 
 - `dim3 grid_ls(NUM_SUBCARRIERS, num_patterns)`
 - `dim3 grid_eq(ceil(TOTAL_DATA / TPB_EQ), num_patterns)`
-- kernel code that reads `blockIdx.y` as the pattern index
+- kernel code 直接把 `blockIdx.y` 當作 pattern index
 
-## Verification
 
-Part 5 keeps the same verification direction as Parts 1–4:
 
-- `H_MSE < 0.01`
-- `MSE_LMMSE < MSE_RX_BEFORE_EQ`
-- `checksum != 0`
+## 量測結果
 
-The CPU baseline provides an additional scalar reference path for the same multi-pattern input.
-
-## Current Measured Result
-
-The current default run uses:
+預設 run 使用：
 
 - `NUM_PATTERNS = 16`
 - `TPB_LS = 256`
 - `TPB_EQ = 256`
 
-Logs:
+對應 logs：
 
-- [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
-- [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
+- [results/default_gpu_run.txt](./results/default_gpu_run.txt)
+- [results/default_cpu_run.txt](./results/default_cpu_run.txt)
 
-本節數字對齊目前 repo 內保存的最新 rerun。
 
-Measured output:
+
+輸出：
 
 | Metric | Value |
 | --- | --- |
@@ -119,7 +100,7 @@ Measured output:
 | `PIPELINE_KERNEL_MS` | `0.434780` |
 | `Verification` | `PASS` |
 
-CPU baseline on the same input:
+同一份 input 的 CPU baseline：
 
 | Metric | Value |
 | --- | --- |
@@ -128,17 +109,13 @@ CPU baseline on the same input:
 | `MSE_LMMSE` | `0.00682142` |
 | `Verification` | `PASS` |
 
-This confirms that the multi-pattern CUDA path preserves the same OFDM computation and correctness checks.
+*  multi-pattern CUDA path 在維持相同 OFDM 運算與 correctness checks 的前提下，可以穩定處理 workload。
 
 ## Pattern Sweep
 
-The current sweep summary is stored in:
+目前的 sweep 摘要保存在：[results/Part5_Experiment_Summary.md](./results/Part5_Experiment_Summary.md)
 
-- [results/Part5_Experiment_Summary.md](/home/york/ca_final_project/part5/results/Part5_Experiment_Summary.md)
 
-下列表格對齊目前 repo 內保存的最新 rerun sweep。
-
-Summary table:
 
 | Patterns | Verification | LS ms | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- |
@@ -148,82 +125,63 @@ Summary table:
 | `16` | `PASS` | `0.086354` | `0.347571` | `0.404536` |
 | `32` | `PASS` | `0.223770` | `0.745861` | `0.926991` |
 
-Interpretation:
+註：
 
-- Total pipeline time increases as more patterns are processed, which is expected because total work also increases.
-- The more useful view is time per pattern. In the current sweep, pipeline time per pattern drops from about `0.069048 ms` at `1` pattern to about `0.028968 ms` at `32` patterns.
-- This matches the Part 5 goal: adding patterns gives the GPU more independent blocks and warps to schedule, so the work is amortized better than a one-pattern launch.
+- total pipeline time 隨著 pattern 數量增加而上升，因為總工作量也上升
+- pipeline time per pattern
+    - 在目前 sweep 中，per-pattern time 從 `1` pattern 時的約 `0.069048 ms`，下降到 `32` patterns 時的約 `0.028968 ms`
 
-## Nsight Compute Evidence
+符合 Part 5 目標：當 pattern 數量增加，GPU 可同時排程的 blocks 與 warps 更多，整體 launch / resource overhead 會被更有效地攤提
 
-The current Nsight Compute capture is:
+## Nsight Compute 證據
 
-- [results/ncu_default.txt](/home/york/ca_final_project/part5/results/ncu_default.txt)
+目前的 Nsight Compute capture：[./results/ncu_default.txt](./results/ncu_default.txt)
 
-For the default `16`-pattern run:
+預設 `16`-pattern run：
 
 ### Stage 1
 
-- grid size: `8192`
-- block size: `256`
-- registers per thread: `16`
-- dynamic shared memory per block: about `2.05 KB`
-- achieved occupancy: about `89.53%`
-- memory throughput: about `55.97%`
-- compute throughput: about `55.97%`
+- grid size：`8192`
+- block size：`256`
+- registers per thread：`16`
+- dynamic shared memory per block：約 `2.05 KB`
+- achieved occupancy：約 `89.53%`
+- memory throughput：約 `55.97%`
+- compute throughput：約 `55.97%`
 
 ### Stage 2
 
-- grid size: `16384`
-- block size: `256`
-- registers per thread: `21`
-- dynamic shared memory per block: `0`
-- achieved occupancy: about `82.77%`
-- memory throughput: about `91.74%`
-- compute throughput: about `28.55%`
+- grid size：`16384`
+- block size：`256`
+- registers per thread：`21`
+- dynamic shared memory per block：`0`
+- achieved occupancy：約 `82.77%`
+- memory throughput：約 `91.74%`
+- compute throughput：約 `28.55%`
 
-Interpretation:
+註：
 
-- Stage 1 still looks like a shared-memory reduction kernel, now replicated across many patterns.
-- Stage 2 remains the more memory-heavy kernel.
-- The larger 2D launch gives the GPU many more blocks and waves per SM than the single-pattern version, which is the main architectural point of Part 5.
+- Stage 1 仍呈現 shared-memory reduction kernel 的特徵，只是現在複製到更多 patterns 上
+- Stage 2 仍偏 memory-heavy 的 kernel
+- 2D launch 讓 GPU 同時看到更多 blocks 與 waves per SM
 
-## PTXAS and PTX Evidence
+## PTXAS 與 PTX 證據
 
-The current build log is:
+目前的 build log：[results/build.txt](./results/build.txt)
 
-- [results/build.txt](/home/york/ca_final_project/part5/results/build.txt)
+目前的 PTX：[main.ptx](./main.ptx)
 
-The current PTX file is:
+觀察：
 
-- [main.ptx](/home/york/ca_final_project/part5/main.ptx)
+- Stage 1 使用 `15` registers per thread
+- Stage 2 使用 `21` registers per thread
+- 兩個都是 `0 spill stores`、`0 spill loads`
 
-From the current build:
 
-- Stage 1 uses `15` registers per thread
-- Stage 2 uses `21` registers per thread
-- both kernels show `0` spill stores and `0` spill loads
 
-The PTX file can be used to inspect:
+## 執行指令
 
-- global load/store instructions in Stage 2
-- shared-memory usage in Stage 1
-- the 2D-grid kernel structure that extends the Part 4 design to multiple patterns
-
-## Expected Performance Question
-
-Part 5 is not mainly about changing the math inside one kernel. It is about changing how much independent work is available to the GPU.
-
-The main performance questions are:
-
-- why Part 5 should be more GPU-friendly than Part 4
-- whether more patterns always improve performance
-- when the gain starts to flatten
-- how pattern count affects occupancy, active warps, waves per SM, and latency hiding
-
-## Run Commands
-
-Build and run:
+建置與執行：
 
 ```bash
 cd part5
@@ -231,48 +189,30 @@ make
 make run
 ```
 
-CPU baseline:
+CPU baseline：
 
 ```bash
 cd part5
 make run_cpu
 ```
 
-PTX:
+PTX：
 
 ```bash
 cd part5
 make ptx
 ```
 
-Nsight Compute:
+Nsight Compute：
 
 ```bash
 cd part5
 make profile
 ```
 
-Pattern sweep:
+Pattern sweep：
 
 ```bash
 cd part5
 make sweep
 ```
-
-## Current Status
-
-Implemented:
-
-- multi-pattern input generator
-- CPU baseline
-- CUDA Part 5 main program
-- 2D grid mapping with `blockIdx.y`
-- shared-memory Stage 1 reduction
-- element-wise Stage 2 equalization
-- sweep script for pattern-count experiments
-
-Next step after implementation:
-
-- extend the pattern sweep if needed
-- compare Part 4 and Part 5 more directly in the final report
-- decide how many pattern counts to include in the final submission figures

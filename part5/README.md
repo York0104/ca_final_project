@@ -1,58 +1,58 @@
 # Part 5
 
-## Scope
+## 範圍
 
-Part 5 is the multi-pattern GPU extension of the Part 4 pipeline:
+Part 5 是 Part 4 CUDA pipeline 的 multi-pattern GPU 延伸版本：
 
-- Stage 1: LS channel estimation
-- Stage 2: one-tap LMMSE equalization
+- Stage 1：LS channel estimation
+- Stage 2：one-tap LMMSE equalization
 
-The key difference from Part 4 is that Part 5 processes multiple independent OFDM input patterns in one GPU launch sequence.
+和 Part 4 的主要差異在於：Part 5 會在一次 GPU launch sequence 中，同時處理多個彼此獨立的 OFDM input patterns。
 
-Default logs are kept in:
+預設輸出紀錄保存在：
 
 - [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
 - [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
 
-## Problem and Goal
+## 問題與目標
 
-According to [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf), the previous parts only process one input pattern. Part 5 should move to:
+依照 [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)，前面幾個 parts 都只處理單一 input pattern。Part 5 的重點是進一步利用：
 
-- multiple independent patterns
-- GPU parallelism across patterns
+- 多個獨立 patterns 之間的平行性
+- GPU 上跨 patterns 的平行執行
 - 2D CUDA grid mapping
 
-In this repository, that means:
+在本 repository 中，這表示：
 
-- keep the same OFDM math as Part 4
-- keep the same Stage 1 shared-memory reduction
-- keep the same Stage 2 thread-per-output mapping
-- add a pattern dimension and map it to `blockIdx.y`
+- 維持與 Part 4 相同的 OFDM 數學模型
+- 維持相同的 Stage 1 shared-memory reduction
+- 維持相同的 Stage 2 thread-per-output mapping
+- 新增 pattern dimension，並映射到 `blockIdx.y`
 
-## File Layout
+## 檔案結構
 
-- source: [main.cu](/home/york/ca_final_project/part5/main.cu)
-- CPU baseline: [main_cpu.cpp](/home/york/ca_final_project/part5/main_cpu.cpp)
-- multi-pattern generator: [generate_ofdm_multi.cpp](/home/york/ca_final_project/part5/generate_ofdm_multi.cpp)
-- local format helpers: [ofdm_multi_common.h](/home/york/ca_final_project/part5/ofdm_multi_common.h)
-- build script: [Makefile](/home/york/ca_final_project/part5/Makefile)
-- experiment script: [run_experiments.sh](/home/york/ca_final_project/part5/run_experiments.sh)
+- source：[main.cu](/home/york/ca_final_project/part5/main.cu)
+- CPU baseline：[main_cpu.cpp](/home/york/ca_final_project/part5/main_cpu.cpp)
+- multi-pattern generator：[generate_ofdm_multi.cpp](/home/york/ca_final_project/part5/generate_ofdm_multi.cpp)
+- local format helpers：[ofdm_multi_common.h](/home/york/ca_final_project/part5/ofdm_multi_common.h)
+- build script：[Makefile](/home/york/ca_final_project/part5/Makefile)
+- experiment script：[run_experiments.sh](/home/york/ca_final_project/part5/run_experiments.sh)
 
-## Data Model
+## 資料模型
 
-The generator writes a dedicated multi-pattern input file:
+generator 會輸出專用的 multi-pattern input：
 
 ```text
 ../data/ofdm_input_multi.bin
 ```
 
-Each pattern uses the same OFDM dimensions as Parts 1–4:
+每個 pattern 都沿用與 Parts 1–4 相同的 OFDM 維度：
 
 - `NUM_SUBCARRIERS = 512`
 - `NUM_PILOTS = 256`
 - `NUM_DATA_SYMBOLS = 512`
 
-Patterns share the same pilot weights and deep-fade channel shape, while QPSK symbols and AWGN samples vary deterministically with the pattern index.
+所有 patterns 共用相同的 pilot weights 與 deep-fade channel shape，而 QPSK symbols 與 AWGN samples 則依 pattern index 以 deterministic 方式變化。
 
 ## CUDA Mapping
 
@@ -63,43 +63,43 @@ Patterns share the same pilot weights and deep-fade channel shape, while QPSK sy
 - `blockIdx.x -> subcarrier k`
 - `blockIdx.y -> pattern index`
 - `threadIdx.x -> pilot contributions`
-- `__shared__` is used for block-level reduction
+- 使用 `__shared__` 進行 block-level reduction
 
 ### Stage 2
 
 `lmmse_equalization_multi_kernel()`
 
-- `blockIdx.x * blockDim.x + threadIdx.x -> flattened data index inside one pattern`
+- `blockIdx.x * blockDim.x + threadIdx.x -> 單一 pattern 內的 flattened data index`
 - `blockIdx.y -> pattern index`
-- one thread computes one `Xmmse[s,k]`
+- one thread 計算一個 `Xmmse[s,k]`
 
-This is the 2D grid mapping requested by the assignment:
+這就是作業要求的 2D CUDA grid mapping：
 
-- x-dimension: output/thread index
-- y-dimension: pattern index
+- x-dimension：output / thread index
+- y-dimension：pattern index
 
-## Build
+## 建置
 
 ```bash
 cd part5
 make
 ```
 
-## Run
+## 執行
 
 ```bash
 cd part5
 make run
 ```
 
-Optional CPU baseline:
+可選的 CPU baseline：
 
 ```bash
 cd part5
 make run_cpu
 ```
 
-## PTX and Nsight Compute
+## PTX 與 Nsight Compute
 
 ```bash
 cd part5
@@ -107,7 +107,7 @@ make ptx
 make profile
 ```
 
-Current analysis artifacts:
+目前保存的分析 artifact：
 
 - [main.ptx](/home/york/ca_final_project/part5/main.ptx)
 - [results/build.txt](/home/york/ca_final_project/part5/results/build.txt)
@@ -122,7 +122,7 @@ cd part5
 make sweep
 ```
 
-This sweep currently tests:
+目前 sweep 測試：
 
 - `1`
 - `4`
@@ -130,16 +130,16 @@ This sweep currently tests:
 - `16`
 - `32`
 
-patterns and writes logs to:
+個 patterns，並將結果寫入：
 
 ```text
 part5/results/
 ```
 
-The current sweep summary is:
+目前 sweep 摘要：
 
 - [results/Part5_Experiment_Summary.md](/home/york/ca_final_project/part5/results/Part5_Experiment_Summary.md)
 
-One Nsight Compute capture is also stored at:
+另有一份 Nsight Compute capture：
 
 - [results/ncu_default.txt](/home/york/ca_final_project/part5/results/ncu_default.txt)
