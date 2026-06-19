@@ -94,17 +94,17 @@ Part 2 contains two different mappings:
 
 ## 程式結構
 
- [part2/main.cpp](/home/york/ca_final_project/part2/main.cpp) 只保留本 Part 特有的兩段 computation stages：
+[part2/main.cpp](main.cpp) 只保留本 Part 特有的兩段 computation stages：
 
 1. `estimate_channel_ls_average_rvv_reduction()`
 2. `equalize_lmmse_rvv()`
 
 共用部分則放在：
 
-- [common/ofdm_params.h](/home/york/ca_final_project/common/ofdm_params.h)
-- [common/ofdm_data.h](/home/york/ca_final_project/common/ofdm_data.h)
-- [common/ofdm_io.h](/home/york/ca_final_project/common/ofdm_io.h)
-- [common/ofdm_verify.h](/home/york/ca_final_project/common/ofdm_verify.h)
+- [common/ofdm_params.h](../common/ofdm_params.h)
+- [common/ofdm_data.h](../common/ofdm_data.h)
+- [common/ofdm_io.h](../common/ofdm_io.h)
+- [common/ofdm_verify.h](../common/ofdm_verify.h)
 
 所有 Part 都讀取同一份：
 

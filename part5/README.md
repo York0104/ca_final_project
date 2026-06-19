@@ -11,12 +11,12 @@ Part 5 是 Part 4 CUDA pipeline 的 multi-pattern GPU 延伸版本：
 
 預設輸出紀錄保存在：
 
-- [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
-- [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
+- [results/default_gpu_run.txt](results/default_gpu_run.txt)
+- [results/default_cpu_run.txt](results/default_cpu_run.txt)
 
 ## 問題與目標
 
-依照 [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)，前面幾個 parts 都只處理單一 input pattern。Part 5 的重點是進一步利用：
+依照 [reference/CA_Final_Project.pdf](../reference/CA_Final_Project.pdf)，前面幾個 parts 都只處理單一 input pattern。Part 5 的重點是進一步利用：
 
 - 多個獨立 patterns 之間的平行性
 - GPU 上跨 patterns 的平行執行
@@ -31,12 +31,12 @@ Part 5 是 Part 4 CUDA pipeline 的 multi-pattern GPU 延伸版本：
 
 ## 檔案結構
 
-- source：[main.cu](/home/york/ca_final_project/part5/main.cu)
-- CPU baseline：[main_cpu.cpp](/home/york/ca_final_project/part5/main_cpu.cpp)
-- multi-pattern generator：[generate_ofdm_multi.cpp](/home/york/ca_final_project/part5/generate_ofdm_multi.cpp)
-- local format helpers：[ofdm_multi_common.h](/home/york/ca_final_project/part5/ofdm_multi_common.h)
-- build script：[Makefile](/home/york/ca_final_project/part5/Makefile)
-- experiment script：[run_experiments.sh](/home/york/ca_final_project/part5/run_experiments.sh)
+- source：[main.cu](main.cu)
+- CPU baseline：[main_cpu.cpp](main_cpu.cpp)
+- multi-pattern generator：[generate_ofdm_multi.cpp](generate_ofdm_multi.cpp)
+- local format helpers：[ofdm_multi_common.h](ofdm_multi_common.h)
+- build script：[Makefile](Makefile)
+- experiment script：[run_experiments.sh](run_experiments.sh)
 
 ## 資料模型
 
@@ -109,11 +109,11 @@ make profile
 
 目前保存的分析 artifact：
 
-- [main.ptx](/home/york/ca_final_project/part5/main.ptx)
-- [results/build.txt](/home/york/ca_final_project/part5/results/build.txt)
-- [results/ncu_default.txt](/home/york/ca_final_project/part5/results/ncu_default.txt)
-- [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
-- [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
+- [main.ptx](main.ptx)
+- [results/build.txt](results/build.txt)
+- [results/ncu_default.txt](results/ncu_default.txt)
+- [results/default_gpu_run.txt](results/default_gpu_run.txt)
+- [results/default_cpu_run.txt](results/default_cpu_run.txt)
 
 ## Pattern Sweep
 
@@ -138,8 +138,8 @@ part5/results/
 
 目前 sweep 摘要：
 
-- [results/Part5_Experiment_Summary.md](/home/york/ca_final_project/part5/results/Part5_Experiment_Summary.md)
+- [results/Part5_Experiment_Summary.md](results/Part5_Experiment_Summary.md)
 
 另有一份 Nsight Compute capture：
 
-- [results/ncu_default.txt](/home/york/ca_final_project/part5/results/ncu_default.txt)
+- [results/ncu_default.txt](results/ncu_default.txt)

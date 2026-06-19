@@ -9,11 +9,11 @@ Part 4 是 CUDA SIMT 單一 pattern ：
 
 單一 pattern CUDA 需要的主要檔案：
 
-- source：[main.cu](/home/york/ca_final_project/part4/main.cu)
-- build script：[Makefile](/home/york/ca_final_project/part4/Makefile)
-- experiment script：[run_experiments.sh](/home/york/ca_final_project/part4/run_experiments.sh)
-- 說明文件：[Part4_CUDA_SIMT.md](/home/york/ca_final_project/part4/Part4_CUDA_SIMT.md)
-- 結果輸出：[results/](/home/york/ca_final_project/part4/results)
+- source：[main.cu](main.cu)
+- build script：[Makefile](Makefile)
+- experiment script：[run_experiments.sh](run_experiments.sh)
+- 說明文件：[Part4_CUDA_SIMT.md](Part4_CUDA_SIMT.md)
+- 結果輸出：[results/](results/)
 
 ## Kernel Mapping
 

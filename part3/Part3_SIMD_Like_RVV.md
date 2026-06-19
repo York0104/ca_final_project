@@ -85,17 +85,17 @@ NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
 
 ## 程式結構
 
-[part3/main.cpp](/home/york/ca_final_project/part3/main.cpp) 只保留本 Part 的兩段主要 computation stages：
+[part3/main.cpp](main.cpp) 只保留本 Part 的兩段主要 computation stages：
 
 1. `estimate_channel_ls_average_rvv_simd_like()`
 2. `equalize_lmmse_rvv()`
 
 並與 Part 1 / Part 2 共用：
 
-- [common/ofdm_params.h](/home/york/ca_final_project/common/ofdm_params.h)
-- [common/ofdm_data.h](/home/york/ca_final_project/common/ofdm_data.h)
-- [common/ofdm_io.h](/home/york/ca_final_project/common/ofdm_io.h)
-- [common/ofdm_verify.h](/home/york/ca_final_project/common/ofdm_verify.h)
+- [common/ofdm_params.h](../common/ofdm_params.h)
+- [common/ofdm_data.h](../common/ofdm_data.h)
+- [common/ofdm_io.h](../common/ofdm_io.h)
+- [common/ofdm_verify.h](../common/ofdm_verify.h)
 
 
 

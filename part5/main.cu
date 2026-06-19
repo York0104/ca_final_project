@@ -547,6 +547,11 @@ int main(int argc, char **argv){
     int warmup_iters = (argc >= 3) ? atoi(argv[2]) : DEFAULT_WARMUP_ITERS;
     int timed_iters = (argc >= 4) ? atoi(argv[3]) : DEFAULT_TIMED_ITERS;
 
+    if ((TPB_LS & (TPB_LS - 1)) != 0){
+        printf("TPB_LS must be a power of two.\n");
+        return 1;
+    }
+
     if (warmup_iters < 0 || timed_iters <= 0){
         printf("Invalid iteration counts: warmup=%d timed=%d\n", warmup_iters, timed_iters);
         return 1;

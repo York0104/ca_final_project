@@ -46,7 +46,7 @@ LS Channel Estimation + LMMSE/MMSE Equalizer Acceleration
 | Part 2 / Part 3 | `riscv64-linux-gnu-g++ -static -O2 -std=c++11 -march=rv64gcv -mabi=lp64d` |
 | Part 4 / Part 5 | `nvcc -O2 -std=c++17 -arch=sm_86 -lineinfo -Xptxas -v` |
 
-題目在 [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf) 中提醒：
+題目在 [reference/CA_Final_Project.pdf](reference/CA_Final_Project.pdf) 中提醒：
 
 1. GPU 型號需要註明。
 2. `gem5 simulated time` 與實際 CPU/GPU runtime 是不同概念，不可直接混用。
@@ -627,20 +627,20 @@ Part 4 已經顯示 shared-memory reduction 能有效支撐 Stage 1；Part 5 則
 
 ## 9. 參考資料
 
-1. [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)
+1. [reference/CA_Final_Project.pdf](reference/CA_Final_Project.pdf)
    - 作業題意、Part 1～Part 5 的要求
    - Report 建議章節
    - gem5 與 GPU 量測提醒
-2. [reference/riscv-v-spec-1.0.pdf](/home/york/ca_final_project/reference/riscv-v-spec-1.0.pdf)
+2. [reference/riscv-v-spec-1.0.pdf](reference/riscv-v-spec-1.0.pdf)
    - `vsetvli`
    - unit-stride / strided vector memory access
    - floating-point vector arithmetic
    - vector reduction operations
-3. [reference/FP_toy_example/](/home/york/ca_final_project/reference/FP_toy_example)
+3. [reference/FP_toy_example/](reference/FP_toy_example/)
    - 助教提供的 build / run / gem5 / CUDA workflow 參考
 4. Repository implementation and logs
-   - [part1/Part1_MMSE.md](/home/york/ca_final_project/part1/Part1_MMSE.md)
-   - [part2/Part2_RVV_Reduction.md](/home/york/ca_final_project/part2/Part2_RVV_Reduction.md)
-   - [part3/Part3_SIMD_Like_RVV.md](/home/york/ca_final_project/part3/Part3_SIMD_Like_RVV.md)
-   - [part4/Part4_CUDA_SIMT.md](/home/york/ca_final_project/part4/Part4_CUDA_SIMT.md)
-   - [part5/Part5_Multi_Pattern_GPU.md](/home/york/ca_final_project/part5/Part5_Multi_Pattern_GPU.md)
+   - [part1/Part1_MMSE.md](part1/Part1_MMSE.md)
+   - [part2/Part2_RVV_Reduction.md](part2/Part2_RVV_Reduction.md)
+   - [part3/Part3_SIMD_Like_RVV.md](part3/Part3_SIMD_Like_RVV.md)
+   - [part4/Part4_CUDA_SIMT.md](part4/Part4_CUDA_SIMT.md)
+   - [part5/Part5_Multi_Pattern_GPU.md](part5/Part5_Multi_Pattern_GPU.md)

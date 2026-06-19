@@ -163,7 +163,7 @@ data/ofdm_input.bin
 
 ### Part 1 main.cpp
 
-Part 1 的 [main.cpp](/home/york/ca_final_project/part1/main.cpp) 只保留本 Part 特有的兩個 computation stages：
+Part 1 的 [main.cpp](main.cpp) 只保留本 Part 特有的兩個 computation stages：
 
 1. `estimate_channel_ls_average_scalar()`
 2. `equalize_lmmse_scalar()`

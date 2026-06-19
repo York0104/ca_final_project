@@ -62,7 +62,7 @@ Stage 1 仍是 block-cooperative shared-memory reduction，只是 grid 現在同
 
 - CUDA source：[main.cu](./main.cu)
 - CPU baseline：[main_cpu.cpp](./main_cpu.cpp)
-- Makefile：[Makefile](.Makefile)
+- Makefile：[Makefile](Makefile)
 - sweep script：[run_experiments.sh](./run_experiments.sh)
 
 multi-pattern mapping 證據：

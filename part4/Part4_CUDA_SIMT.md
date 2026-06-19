@@ -15,13 +15,13 @@ CUDA SIMT LS Channel Estimation + CUDA LMMSE Equalization
 - 不使用 multi-pattern batching
 - 不使用 2D grid
 
-Part 5 另行實作於 [`part5/`](/home/york/ca_final_project/part5)，不屬於這份單一 pattern CUDA 文件的範圍。
+Part 5 另行實作於 [`part5/`](../part5/)，不屬於這份單一 pattern CUDA 文件的範圍。
 
 目前 repository 中的 Part 4 已包含 source code、build scripts、PTX/PTXAS 材料、Nsight Compute 輸出、TPB sweep logs，以及 shared-vs-serial Stage 1 comparison。
 
 ## 題目要求對應
 
-依照 [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)，Part 4 需要：
+依照 [reference/CA_Final_Project.pdf](../reference/CA_Final_Project.pdf)，Part 4 需要：
 
 - 使用 CUDA SIMT execution model
 - each thread computes one output task
@@ -35,15 +35,15 @@ Part 5 另行實作於 [`part5/`](/home/york/ca_final_project/part5)，不屬於
 
 | Requirement | Repository 中的證據 |
 | --- | --- |
-| CUDA SIMT implementation | [main.cu](/home/york/ca_final_project/part4/main.cu) |
+| CUDA SIMT implementation | [main.cu](main.cu) |
 | each thread computes one output task | `lmmse_equalization_kernel()` |
 | `threadIdx.x / blockIdx.x / blockDim.x` mapping | `main.cu` 中的 Stage 1 與 Stage 2 kernels |
 | `__shared__` usage | `ls_channel_estimation_shared_kernel()` |
-| `-arch=sm_xx` build | [Makefile](/home/york/ca_final_project/part4/Makefile) 內的 `-arch=sm_86` |
-| PTX generation | [results/main_shared_256_256.ptx](/home/york/ca_final_project/part4/results/main_shared_256_256.ptx) |
+| `-arch=sm_xx` build | [Makefile](Makefile) 內的 `-arch=sm_86` |
+| PTX generation | [results/main_shared_256_256.ptx](results/main_shared_256_256.ptx) |
 | PTXAS output | `results/*_build.txt` |
-| `ncu --set basic` profiling | [results/ncu_shared_256_256.txt](/home/york/ca_final_project/part4/results/ncu_shared_256_256.txt) |
-| TPB 分析 | [results/Part4_Experiment_Summary.md](/home/york/ca_final_project/part4/results/Part4_Experiment_Summary.md) |
+| `ncu --set basic` profiling | [results/ncu_shared_256_256.txt](results/ncu_shared_256_256.txt) |
+| TPB 分析 | [results/Part4_Experiment_Summary.md](results/Part4_Experiment_Summary.md) |
 
 ## Kernel 設計
 
@@ -88,9 +88,9 @@ k   = idx % NUM_SUBCARRIERS
 
 主要檔案：
 
-- [part4/main.cu](/home/york/ca_final_project/part4/main.cu)
-- [part4/Makefile](/home/york/ca_final_project/part4/Makefile)
-- [part4/README.md](/home/york/ca_final_project/part4/README.md)
+- [part4/main.cu](main.cu)
+- [part4/Makefile](Makefile)
+- [part4/README.md](README.md)
 
 編譯：
 
@@ -150,7 +150,7 @@ Verification = PASS
 
 已保存：
 
-- [part4/results/main_shared_256_256.ptx](/home/york/ca_final_project/part4/results/main_shared_256_256.ptx)
+- [part4/results/main_shared_256_256.ptx](results/main_shared_256_256.ptx)
 
 LS shared kernel 可見：
 
@@ -174,7 +174,7 @@ LMMSE kernel 可見：
 
 已保存：
 
-- [part4/results/ncu_shared_256_256.txt](/home/york/ca_final_project/part4/results/ncu_shared_256_256.txt)
+- [part4/results/ncu_shared_256_256.txt](results/ncu_shared_256_256.txt)
 
 這份 profile 使用 `TPB_LS=256`、`TPB_EQ=256` 與 `shared` LS mode 量測。
 
@@ -210,7 +210,7 @@ LMMSE kernel 可見：
 
 目前摘要：
 
-- [part4/results/Part4_Experiment_Summary.md](/home/york/ca_final_project/part4/results/Part4_Experiment_Summary.md)
+- [part4/results/Part4_Experiment_Summary.md](results/Part4_Experiment_Summary.md)
 
 下列表格對齊目前 repo 內保存的最新 rerun sweep。
 

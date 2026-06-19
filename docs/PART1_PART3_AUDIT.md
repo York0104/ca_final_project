@@ -14,7 +14,7 @@ This audit covers only the currently implemented work:
 
 Authoritative specification:
 
-- [reference/CA_Final_Project.pdf](/home/york/ca_final_project/reference/CA_Final_Project.pdf)
+- [reference/CA_Final_Project.pdf](../reference/CA_Final_Project.pdf)
 
 Relevant assignment requirements confirmed from the PDF:
 
@@ -28,28 +28,28 @@ Relevant assignment requirements confirmed from the PDF:
 
 Implemented source files:
 
-- [common/ofdm_params.h](/home/york/ca_final_project/common/ofdm_params.h)
-- [common/ofdm_data.h](/home/york/ca_final_project/common/ofdm_data.h)
-- [common/ofdm_io.h](/home/york/ca_final_project/common/ofdm_io.h)
-- [common/ofdm_model.h](/home/york/ca_final_project/common/ofdm_model.h)
-- [common/ofdm_verify.h](/home/york/ca_final_project/common/ofdm_verify.h)
-- [data_gen/generate_ofdm_data.cpp](/home/york/ca_final_project/data_gen/generate_ofdm_data.cpp)
-- [part1/main.cpp](/home/york/ca_final_project/part1/main.cpp)
-- [part2/main.cpp](/home/york/ca_final_project/part2/main.cpp)
-- [part3/main.cpp](/home/york/ca_final_project/part3/main.cpp)
+- [common/ofdm_params.h](../common/ofdm_params.h)
+- [common/ofdm_data.h](../common/ofdm_data.h)
+- [common/ofdm_io.h](../common/ofdm_io.h)
+- [common/ofdm_model.h](../common/ofdm_model.h)
+- [common/ofdm_verify.h](../common/ofdm_verify.h)
+- [data_gen/generate_ofdm_data.cpp](../data_gen/generate_ofdm_data.cpp)
+- [part1/main.cpp](../part1/main.cpp)
+- [part2/main.cpp](../part2/main.cpp)
+- [part3/main.cpp](../part3/main.cpp)
 
 Build entry points:
 
-- [part1/Makefile](/home/york/ca_final_project/part1/Makefile)
-- [part2/Makefile](/home/york/ca_final_project/part2/Makefile)
-- [part3/Makefile](/home/york/ca_final_project/part3/Makefile)
+- [part1/Makefile](../part1/Makefile)
+- [part2/Makefile](../part2/Makefile)
+- [part3/Makefile](../part3/Makefile)
 
 Documentation updated to match code:
 
-- [part1/Part1_MMSE.md](/home/york/ca_final_project/part1/Part1_MMSE.md)
-- [part2/Part2_RVV_Reduction.md](/home/york/ca_final_project/part2/Part2_RVV_Reduction.md)
-- [part3/Part3_SIMD_Like_RVV.md](/home/york/ca_final_project/part3/Part3_SIMD_Like_RVV.md)
-- [Overall_Results_Analysis.md](/home/york/ca_final_project/Overall_Results_Analysis.md)
+- [part1/Part1_MMSE.md](../part1/Part1_MMSE.md)
+- [part2/Part2_RVV_Reduction.md](../part2/Part2_RVV_Reduction.md)
+- [part3/Part3_SIMD_Like_RVV.md](../part3/Part3_SIMD_Like_RVV.md)
+- [Overall_Results_Analysis.md](../Overall_Results_Analysis.md)
 
 ## Algorithm Mapping
 
