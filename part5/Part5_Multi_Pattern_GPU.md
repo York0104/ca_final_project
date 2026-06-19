@@ -105,7 +105,7 @@ Logs:
 - [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
 - [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
 
-本節數字對齊 2026-06-19 的 fresh rerun。
+本節數字對齊目前 repo 內保存的最新 rerun。
 
 Measured output:
 

@@ -352,10 +352,11 @@ def make_dual_panel_line_chart(
     output_path.write_text(svg_footer(lines), encoding="utf-8")
 
 
-def parse_part123_metrics() -> Tuple[List[str], List[float], List[float]]:
+def parse_part123_metrics() -> Tuple[List[str], List[float], List[float], List[float]]:
     text = read_text(ROOT / "Overall_Results_Analysis.md")
     rows = parse_markdown_table(text, "## 正式比較表")
 
+    sim_seconds = []
     num_cycles = []
     dcache_miss = []
     parts = ["Part 1", "Part 2", "Part 3"]
@@ -363,12 +364,14 @@ def parse_part123_metrics() -> Tuple[List[str], List[float], List[float]]:
 
     for row in rows:
         metric = row["Metric"].replace("`", "")
+        if metric == "simSeconds":
+            sim_seconds = [clean_number(row[key]) for key in part_keys]
         if metric == "numCycles":
             num_cycles = [clean_number(row[key]) for key in part_keys]
         if metric == "D-cache miss rate":
             dcache_miss = [clean_number(row[key]) for key in part_keys]
 
-    return parts, num_cycles, dcache_miss
+    return parts, sim_seconds, num_cycles, dcache_miss
 
 
 def parse_part4_sweeps() -> Tuple[List[str], List[float], List[str], List[float]]:
@@ -383,6 +386,22 @@ def parse_part4_sweeps() -> Tuple[List[str], List[float], List[str], List[float]
     return ls_labels, ls_vals, eq_labels, eq_vals
 
 
+def parse_part4_shared_vs_serial() -> Tuple[List[str], List[float], List[float]]:
+    text = read_text(ROOT / "part4" / "results" / "Part4_Experiment_Summary.md")
+    rows = parse_markdown_table(text, "## Shared vs Serial LS Comparison")
+
+    labels = []
+    ls_vals = []
+    pipeline_vals = []
+
+    for row in rows:
+        labels.append(row["LS Mode"].capitalize())
+        ls_vals.append(clean_number(row["LS ms"]))
+        pipeline_vals.append(clean_number(row["Pipeline ms"]))
+
+    return labels, ls_vals, pipeline_vals
+
+
 def parse_part5_sweep() -> Tuple[List[int], List[float], List[float]]:
     text = read_text(ROOT / "part5" / "results" / "Part5_Experiment_Summary.md")
     rows = parse_markdown_table(text, "## Pattern Sweep")
@@ -395,7 +414,16 @@ def parse_part5_sweep() -> Tuple[List[int], List[float], List[float]]:
 def main() -> None:
     FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    parts, num_cycles, dcache_miss = parse_part123_metrics()
+    parts, sim_seconds, num_cycles, dcache_miss = parse_part123_metrics()
+    make_single_bar_chart(
+        title="gem5 SimSeconds Comparison for Parts 1-3",
+        categories=parts,
+        values=sim_seconds,
+        y_label="Simulated Time (s)",
+        output_path=FIG_DIR / "fig_part123_simseconds.svg",
+        color=COLOR_GREEN,
+    )
+
     make_single_bar_chart(
         title="gem5 NumCycles Comparison for Parts 1-3",
         categories=parts,
@@ -425,6 +453,19 @@ def main() -> None:
         right_values=eq_vals,
         y_label="Pipeline Kernel Time (ms)",
         output_path=FIG_DIR / "fig_part4_tpb_sweep.svg",
+    )
+
+    shared_labels, shared_ls_vals, shared_pipeline_vals = parse_part4_shared_vs_serial()
+    make_dual_panel_bar_chart(
+        title="Part 4 Shared vs Serial Stage 1",
+        left_title="Stage 1 LS Kernel Time",
+        left_categories=shared_labels,
+        left_values=shared_ls_vals,
+        right_title="End-to-End Pipeline Kernel Time",
+        right_categories=shared_labels,
+        right_values=shared_pipeline_vals,
+        y_label="Kernel Time (ms)",
+        output_path=FIG_DIR / "fig_part4_shared_vs_serial.svg",
     )
 
     patterns, pipeline, per_pattern = parse_part5_sweep()

@@ -230,7 +230,7 @@ The shared validation checks:
 
 For `Part 1` to `Part 3`, these values are printed by the executable itself and recorded in the checked-in Markdown summaries.
 
-For `Part 4` and `Part 5`, the checked-in `results/*_run.txt` logs and the 2026-06-19 rerun copies under `rerun_outputs/` both include the same functional checks together with GPU timing output.
+For `Part 4` and `Part 5`, the checked-in `results/*_run.txt` logs include the same functional checks together with GPU timing output.
 
 ## Environment Notes
 

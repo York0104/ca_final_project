@@ -209,7 +209,7 @@ Current summary:
 
 - [part4/results/Part4_Experiment_Summary.md](/home/york/ca_final_project/part4/results/Part4_Experiment_Summary.md)
 
-下列表格對齊 2026-06-19 的 fresh rerun sweep。
+下列表格對齊目前 repo 內保存的最新 rerun sweep。
 
 ### LS shared kernel sweep
 
