@@ -35,6 +35,39 @@ extract_value() {
 }
 
 write_summary() {
+    local best_ls_tpb=""
+    local best_ls_pipeline=""
+    local best_eq_tpb=""
+    local best_eq_pipeline=""
+
+    for label in ls_shared_64 ls_shared_128 ls_shared_256; do
+        local run_log="${RESULT_DIR}/${label}_run.txt"
+        local tpb_ls
+        local pipeline_ms
+
+        tpb_ls="$(extract_value "TPB_LS" "${run_log}")"
+        pipeline_ms="$(extract_value "PIPELINE_KERNEL_MS" "${run_log}")"
+
+        if [[ -z "${best_ls_pipeline}" ]] || awk "BEGIN { exit !(${pipeline_ms} < ${best_ls_pipeline}) }"; then
+            best_ls_tpb="${tpb_ls}"
+            best_ls_pipeline="${pipeline_ms}"
+        fi
+    done
+
+    for label in eq_shared_128 eq_shared_256 eq_shared_512; do
+        local run_log="${RESULT_DIR}/${label}_run.txt"
+        local tpb_eq
+        local pipeline_ms
+
+        tpb_eq="$(extract_value "TPB_EQ" "${run_log}")"
+        pipeline_ms="$(extract_value "PIPELINE_KERNEL_MS" "${run_log}")"
+
+        if [[ -z "${best_eq_pipeline}" ]] || awk "BEGIN { exit !(${pipeline_ms} < ${best_eq_pipeline}) }"; then
+            best_eq_tpb="${tpb_eq}"
+            best_eq_pipeline="${pipeline_ms}"
+        fi
+    done
+
     {
         echo "# Part 4 Experiment Summary"
         echo
@@ -126,8 +159,8 @@ write_summary() {
         echo
         echo "## Interpretation"
         echo
-        echo "- Larger \`TPB_LS\` does not automatically improve timing. In the current LS sweep, \`TPB_LS=128\` is the best among the tested cases."
-        echo "- The LMMSE sweep is also non-monotonic. In the current measurements, \`TPB_EQ=512\` is the best among the tested cases."
+        echo "- Larger \`TPB_LS\` does not automatically improve timing. In the current LS sweep, \`TPB_LS=${best_ls_tpb}\` gives the lowest measured pipeline kernel-only time."
+        echo "- The LMMSE sweep is also non-monotonic. In the current measurements, \`TPB_EQ=${best_eq_tpb}\` is the best among the tested cases."
         echo "- The shared-vs-serial comparison should be read as a comparison between:"
         echo "  - block-cooperative shared-memory reduction"
         echo "  - one-thread-per-subcarrier serial Stage 1"

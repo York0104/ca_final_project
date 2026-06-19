@@ -1,3 +1,4 @@
+./main ../data/ofdm_input_multi.bin
 Part 5 - Multi-pattern CUDA LS Channel Estimation + CUDA LMMSE Equalization
 NUM_PATTERNS                  = 16
 NUM_SUBCARRIERS              = 512
@@ -16,7 +17,7 @@ checksum                     = 9294.77246094
 guard                        = 9294.95507812
 TPB_LS                       = 256
 TPB_EQ                       = 256
-LS_KERNEL_MS                 = 0.161546
-LMMSE_KERNEL_MS              = 0.282593
-PIPELINE_KERNEL_MS           = 0.346563
+LS_KERNEL_MS                 = 0.128993
+LMMSE_KERNEL_MS              = 0.308572
+PIPELINE_KERNEL_MS           = 0.434780
 Verification                 = PASS

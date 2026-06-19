@@ -19,15 +19,13 @@ RVV Reduction LS Channel Estimation + RVV LMMSE Equalization
 Part 1：
 
 ```text
-Scalar LS Channel Estimation
-+ Scalar LMMSE Equalization
+Scalar LS Channel Estimation + Scalar LMMSE Equalization
 ```
 
 Part 2：
 
 ```text
-RVV Reduction LS Channel Estimation
-+ RVV LMMSE Equalization
+RVV Reduction LS Channel Estimation + RVV LMMSE Equalization
 ```
 
 Stage 1 uses RVV reduction. Stage 2 uses RVV element-wise vectorization.
@@ -59,8 +57,6 @@ vector lanes -> different pilot observations p for the same subcarrier k
 reduction    -> sum over p
 ```
 
-This stage is where the required vector reduction appears.
-
 ---
 
 ## Computation Stage 2
@@ -70,11 +66,10 @@ This stage is where the required vector reduction appears.
 Part 2 的第二段主要計算為：
 
 ```text
-Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
-             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
+Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k]) / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
 ```
 
-這段不需要 reduction，而是沿著 subcarrier `k` 做 unit-stride RVV element-wise vectorization。
+這段不做 reduction，而是沿著 subcarrier `k` 做 unit-stride RVV element-wise vectorization。
 
 其中：
 
@@ -98,7 +93,7 @@ Part 2 contains two different mappings:
 
 ## 程式結構
 
-目前 [part2/main.cpp](/home/york/ca_final_project/part2/main.cpp) 只保留本 Part 特有的兩段 computation stages：
+ [part2/main.cpp](/home/york/ca_final_project/part2/main.cpp) 只保留本 Part 特有的兩段 computation stages：
 
 1. `estimate_channel_ls_average_rvv_reduction()`
 2. `equalize_lmmse_rvv()`
@@ -154,22 +149,20 @@ checksum != 0
 | `checksum` | `584.37054443` |
 | `Verification` | `PASS` |
 
-- `objdump` shows `vfredusum.vs` in Stage 1.
-- `objdump` shows `vfdiv.vv` and `vse32.v` in Stage 2.
-- The checksum difference from Part 1 stays at floating-point rounding scale.
+
 
 ### gem5 stats
 
 | Metric | Part 2 RVV |
 | --- | --- |
-| `simSeconds` | `0.054827` |
-| `simTicks` | `54,826,790,000` |
-| `hostSeconds` | `22.91` |
-| `simInsts` | `11,395,259` |
-| `simOps` | `11,395,296` |
-| `numCycles` | `109,653,580` |
-| `CPI` | `9.622709` |
-| `IPC` | `0.103921` |
+| `simSeconds` | `0.054755` |
+| `simTicks` | `54,755,426,000` |
+| `hostSeconds` | `21.49` |
+| `simInsts` | `11,395,368` |
+| `simOps` | `11,395,405` |
+| `numCycles` | `109,510,852` |
+| `CPI` | `9.610092` |
+| `IPC` | `0.104057` |
 | `D-cache misses` | `560,245` |
 | `D-cache miss rate` | `0.170969` |
 | `I-cache misses` | `928` |
@@ -179,15 +172,10 @@ checksum != 0
 
 | Metric | Part 1 Scalar | Part 2 RVV | Change |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.069028` | `0.054827` | `-20.57%` |
-| `simInsts` | `17,066,142` | `11,395,259` | `-33.23%` |
-| `numCycles` | `138,056,924` | `109,653,580` | `-20.57%` |
-| `CPI` | `8.089506` | `9.622709` | `+18.95%` |
-| `IPC` | `0.123617` | `0.103921` | `-15.93%` |
+| `simSeconds` | `0.069028` | `0.054755` | `-20.68%` |
+| `simInsts` | `17,066,251` | `11,395,368` | `-33.23%` |
+| `numCycles` | `138,055,892` | `109,510,852` | `-20.68%` |
+| `CPI` | `8.089394` | `9.610092` | `+18.80%` |
+| `IPC` | `0.123619` | `0.104057` | `-15.82%` |
 | `D-cache miss rate` | `0.114745` | `0.170969` | `+48.95%` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `+54.35%` |
-
-### Interpretation
-
-- `simSeconds`, `simInsts`, and `numCycles` all drop relative to Part 1.
-- CPI and miss rate increase, but the instruction-count reduction is larger than the CPI penalty.

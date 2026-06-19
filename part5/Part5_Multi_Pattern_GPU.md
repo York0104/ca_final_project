@@ -105,6 +105,8 @@ Logs:
 - [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
 - [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
 
+本節數字對齊 2026-06-19 的 fresh rerun。
+
 Measured output:
 
 | Metric | Value |
@@ -112,16 +114,16 @@ Measured output:
 | `H_MSE` | `0.00001289` |
 | `MSE_RX_BEFORE_EQ` | `0.14082038` |
 | `MSE_LMMSE` | `0.00682142` |
-| `LS_KERNEL_MS` | `0.161546` |
-| `LMMSE_KERNEL_MS` | `0.282593` |
-| `PIPELINE_KERNEL_MS` | `0.346563` |
+| `LS_KERNEL_MS` | `0.128993` |
+| `LMMSE_KERNEL_MS` | `0.308572` |
+| `PIPELINE_KERNEL_MS` | `0.434780` |
 | `Verification` | `PASS` |
 
 CPU baseline on the same input:
 
 | Metric | Value |
 | --- | --- |
-| `CPU_PIPELINE_MS` | `10.517579` |
+| `CPU_PIPELINE_MS` | `12.268151` |
 | `H_MSE` | `0.00001289` |
 | `MSE_LMMSE` | `0.00682142` |
 | `Verification` | `PASS` |
@@ -130,24 +132,26 @@ This confirms that the multi-pattern CUDA path preserves the same OFDM computati
 
 ## Pattern Sweep
 
-The current sweep result is stored in:
+The current sweep summary is stored in:
 
 - [results/Part5_Experiment_Summary.md](/home/york/ca_final_project/part5/results/Part5_Experiment_Summary.md)
+
+下列表格對齊目前 repo 內保存的最新 rerun sweep。
 
 Summary table:
 
 | Patterns | Verification | LS ms | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- |
-| `1` | `PASS` | `0.015764` | `0.016374` | `0.051354` |
-| `4` | `PASS` | `0.028692` | `0.069693` | `0.103526` |
-| `8` | `PASS` | `0.065505` | `0.129188` | `0.206428` |
-| `16` | `PASS` | `0.098575` | `0.266102` | `0.346112` |
-| `32` | `PASS` | `0.141276` | `0.526899` | `0.681580` |
+| `1` | `PASS` | `0.032481` | `0.037750` | `0.069048` |
+| `4` | `PASS` | `0.039578` | `0.117176` | `0.141583` |
+| `8` | `PASS` | `0.059996` | `0.177853` | `0.214241` |
+| `16` | `PASS` | `0.086354` | `0.347571` | `0.404536` |
+| `32` | `PASS` | `0.223770` | `0.745861` | `0.926991` |
 
 Interpretation:
 
 - Total pipeline time increases as more patterns are processed, which is expected because total work also increases.
-- The more useful view is time per pattern. In the current sweep, pipeline time per pattern drops from about `0.051354 ms` at `1` pattern to about `0.021299 ms` at `32` patterns.
+- The more useful view is time per pattern. In the current sweep, pipeline time per pattern drops from about `0.069048 ms` at `1` pattern to about `0.028968 ms` at `32` patterns.
 - This matches the Part 5 goal: adding patterns gives the GPU more independent blocks and warps to schedule, so the work is amortized better than a one-pattern launch.
 
 ## Nsight Compute Evidence

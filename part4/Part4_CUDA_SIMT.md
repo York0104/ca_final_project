@@ -205,27 +205,29 @@ Interpretation:
 
 ## TPB Sweep Results
 
-完整表已保存：
+Current summary:
 
 - [part4/results/Part4_Experiment_Summary.md](/home/york/ca_final_project/part4/results/Part4_Experiment_Summary.md)
+
+下列表格對齊 2026-06-19 的 fresh rerun sweep。
 
 ### LS shared kernel sweep
 
 | Case | TPB_LS | TPB_EQ | LS Mode | LS ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- |
-| `ls_shared_64` | `64` | `256` | `shared` | `0.016634` | `0.040935` |
-| `ls_shared_128` | `128` | `256` | `shared` | `0.018294` | `0.043430` |
-| `ls_shared_256` | `256` | `256` | `shared` | `0.018898` | `0.055716` |
+| `ls_shared_64` | `64` | `256` | `shared` | `0.017032` | `0.040740` |
+| `ls_shared_128` | `128` | `256` | `shared` | `0.015666` | `0.039000` |
+| `ls_shared_256` | `256` | `256` | `shared` | `0.017372` | `0.043345` |
 
-In this sweep, `TPB_LS=64` gives the lowest measured pipeline kernel-only time.
+In this sweep, `TPB_LS=128` gives the lowest measured pipeline kernel-only time.
 
 ### LMMSE kernel sweep
 
 | Case | TPB_LS | TPB_EQ | LS Mode | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- |
-| `eq_shared_128` | `256` | `128` | `shared` | `0.022324` | `0.048579` |
-| `eq_shared_256` | `256` | `256` | `shared` | `0.017079` | `0.046890` |
-| `eq_shared_512` | `256` | `512` | `shared` | `0.019672` | `0.041944` |
+| `eq_shared_128` | `256` | `128` | `shared` | `0.021142` | `0.062669` |
+| `eq_shared_256` | `256` | `256` | `shared` | `0.024146` | `0.044678` |
+| `eq_shared_512` | `256` | `512` | `shared` | `0.021271` | `0.034696` |
 
 In this sweep, `TPB_EQ=512` gives the lowest measured pipeline kernel-only time.
 
@@ -233,8 +235,8 @@ In this sweep, `TPB_EQ=512` gives the lowest measured pipeline kernel-only time.
 
 | Case | LS Mode | LS ms | Pipeline ms | Verification |
 | --- | --- | --- | --- | --- |
-| `ls_shared_256` | `shared` | `0.018898` | `0.055716` | `PASS` |
-| `ls_serial_256` | `serial` | `0.125585` | `0.118239` | `PASS` |
+| `ls_shared_256` | `shared` | `0.017372` | `0.043345` | `PASS` |
+| `ls_serial_256` | `serial` | `0.135022` | `0.118535` | `PASS` |
 
 ## Shared vs Serial Interpretation
 

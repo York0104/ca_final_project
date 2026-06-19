@@ -9,15 +9,16 @@ It excludes input loading, allocation, H2D/D2H copies, and host-side verificatio
 
 | Patterns | Verification | LS ms | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- |
-| 1 | PASS | 0.015764 | 0.016374 | 0.051354 |
-| 4 | PASS | 0.028692 | 0.069693 | 0.103526 |
-| 8 | PASS | 0.065505 | 0.129188 | 0.206428 |
-| 16 | PASS | 0.098575 | 0.266102 | 0.346112 |
-| 32 | PASS | 0.141276 | 0.526899 | 0.681580 |
+| 1 | PASS | 0.032481 | 0.037750 | 0.069048 |
+| 4 | PASS | 0.039578 | 0.117176 | 0.141583 |
+| 8 | PASS | 0.059996 | 0.177853 | 0.214241 |
+| 16 | PASS | 0.086354 | 0.347571 | 0.404536 |
+| 32 | PASS | 0.223770 | 0.745861 | 0.926991 |
 
 ## Interpretation
 
 - Part 5 extends Part 4 from one OFDM pattern to multiple independent patterns.
 - The main new mapping is `blockIdx.y -> pattern index`.
 - This should expose more independent blocks and warps than Part 4, especially when the single-pattern workload is not enough to keep the GPU busy.
+- Total pipeline time rises with pattern count because total work rises too. The more useful comparison is pipeline time per pattern, which drops as the GPU launch becomes better amortized.
 - The measured trend should be interpreted together with PTXAS, PTX, and Nsight Compute data rather than from timing alone.

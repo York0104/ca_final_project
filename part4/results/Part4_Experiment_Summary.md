@@ -9,28 +9,28 @@ It excludes input loading, allocation, H2D/D2H copies, and host-side verificatio
 
 | Case | TPB_LS | TPB_EQ | LS Mode | Verification | LS ms | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ls_shared_64 | 64 | 256 | shared | PASS | 0.016634 | 0.018755 | 0.040935 |
-| ls_shared_128 | 128 | 256 | shared | PASS | 0.018294 | 0.030607 | 0.043430 |
-| ls_shared_256 | 256 | 256 | shared | PASS | 0.018898 | 0.026471 | 0.055716 |
+| ls_shared_64 | 64 | 256 | shared | PASS | 0.017032 | 0.019973 | 0.040740 |
+| ls_shared_128 | 128 | 256 | shared | PASS | 0.015666 | 0.020561 | 0.039000 |
+| ls_shared_256 | 256 | 256 | shared | PASS | 0.017372 | 0.020174 | 0.043345 |
 
 ## TPB Sweep for LMMSE Kernel
 
 | Case | TPB_LS | TPB_EQ | LS Mode | Verification | LS ms | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| eq_shared_128 | 256 | 128 | shared | PASS | 0.024895 | 0.022324 | 0.048579 |
-| eq_shared_256 | 256 | 256 | shared | PASS | 0.029638 | 0.017079 | 0.046890 |
-| eq_shared_512 | 256 | 512 | shared | PASS | 0.015930 | 0.019672 | 0.041944 |
+| eq_shared_128 | 256 | 128 | shared | PASS | 0.024464 | 0.021142 | 0.062669 |
+| eq_shared_256 | 256 | 256 | shared | PASS | 0.023186 | 0.024146 | 0.044678 |
+| eq_shared_512 | 256 | 512 | shared | PASS | 0.035142 | 0.021271 | 0.034696 |
 
 ## Shared vs Serial LS Comparison
 
 | Case | TPB_LS | TPB_EQ | LS Mode | Verification | LS ms | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ls_shared_256 | 256 | 256 | shared | PASS | 0.018898 | 0.026471 | 0.055716 |
-| ls_serial_256 | 256 | 256 | serial | PASS | 0.125585 | 0.019938 | 0.118239 |
+| ls_shared_256 | 256 | 256 | shared | PASS | 0.017372 | 0.020174 | 0.043345 |
+| ls_serial_256 | 256 | 256 | serial | PASS | 0.135022 | 0.019535 | 0.118535 |
 
 ## Interpretation
 
-- Larger `TPB_LS` does not automatically improve timing. In the current LS sweep, `TPB_LS=128` is the best among the tested cases.
+- Larger `TPB_LS` does not automatically improve timing. In the current LS sweep, `TPB_LS=128` gives the lowest measured pipeline kernel-only time.
 - The LMMSE sweep is also non-monotonic. In the current measurements, `TPB_EQ=512` is the best among the tested cases.
 - The shared-vs-serial comparison should be read as a comparison between:
   - block-cooperative shared-memory reduction

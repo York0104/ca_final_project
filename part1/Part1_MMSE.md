@@ -16,7 +16,7 @@ Scalar LS Channel Estimation + Scalar LMMSE Equalization
 
 ## Workload
 
-本專題不是單純的 dot product benchmark，而是一個簡化但完整的 OFDM receiver computation pipeline。
+實作簡化的 OFDM receiver computation 。
 
 Part 1 包含兩個主要 computation stages：
 
@@ -65,7 +65,7 @@ Hhat_r[k] = sum_p Ypilot_r[p,k] * w[p]
 Hhat_i[k] = sum_p Ypilot_i[p,k] * w[p]
 ```
 
-這就是 Part 1 的主要 reduction loop。
+ Part 1 主要的 reduction loop。
 
 ### Data model
 
@@ -76,11 +76,10 @@ Y_data[s,k] = H[k] * X_data[s,k] + N_data[s,k]
 ### LMMSE / MMSE one-tap equalizer
 
 ```text
-Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
-             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
+Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k]) / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
 ```
 
-若令：
+令：
 
 ```text
 D[k] = Hhat_r[k]^2 + Hhat_i[k]^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON
@@ -100,57 +99,17 @@ NOISE_VAR = complex noise power sigma_n^2
 NOISE_VAR_OVER_SYMBOL_POWER = sigma_n^2 / sigma_x^2
 ```
 
-由於本專題的 QPSK symbol 採用 `±1 ± j1`，所以：
+設計採用 QPSK symbol `±1 ± j1`：
 
 ```text
 SYMBOL_POWER = 2
 ```
 
-因此正式 LMMSE denominator 採用較標準的：
+LMMSE denominator：
 
 ```text
 |Hhat[k]|^2 + sigma_n^2 / sigma_x^2 + EPSILON
 ```
-
----
-
-## 程式結構
-
-目前專案已重構成共用架構：
-
-```text
-common/
-data_gen/
-part1/
-part2/
-part3/
-```
-
-### C++ data generator
-
-使用：
-
-```text
-data_gen/generate_ofdm_data.cpp
-```
-
-由 C++ 直接產生共同輸入檔：
-
-```text
-data/ofdm_input.bin
-```
-
-所有 Part 都讀同一份 binary input，因此比較更公平。
-
-### Part 1 main.cpp
-
-Part 1 的 [main.cpp](/home/york/ca_final_project/part1/main.cpp) 只保留本 Part 特有的兩個 computation stages：
-
-1. `estimate_channel_ls_average_scalar()`
-2. `equalize_lmmse_scalar()`
-
-共用的資料、I/O 與驗證則放在 `common/`。
-
 ---
 
 ## Verification
@@ -180,6 +139,38 @@ MSE_LMMSE < MSE_RX_BEFORE_EQ
 H_MSE < 0.01
 checksum != 0
 ```
+---
+
+## 程式結構
+
+
+
+### C++ data generator
+
+使用：
+
+```text
+data_gen/generate_ofdm_data.cpp
+```
+
+由 C++ 產生共同輸入檔：
+
+```text
+data/ofdm_input.bin
+```
+
+所有 Part 都讀同一份 binary input，因此比較更公平。
+
+### Part 1 main.cpp
+
+Part 1 的 [main.cpp](/home/york/ca_final_project/part1/main.cpp) 只保留本 Part 特有的兩個 computation stages：
+
+1. `estimate_channel_ls_average_scalar()`
+2. `equalize_lmmse_scalar()`
+
+共用的資料、I/O 與驗證則放在 `common/`。
+
+
 
 ---
 
@@ -198,7 +189,6 @@ checksum != 0
 | `checksum` | `584.37127686` |
 | `Verification` | `PASS` |
 
-Interpretation:
 
 - `H_MSE` is small.
 - `MSE_LMMSE` is well below `MSE_RX_BEFORE_EQ`.
@@ -211,10 +201,10 @@ Interpretation:
 | Metric | Part 1 Scalar |
 | --- | --- |
 | `simSeconds` | `0.069028` |
-| `simInsts` | `17,066,142` |
-| `numCycles` | `138,056,924` |
-| `CPI` | `8.089506` |
-| `IPC` | `0.123617` |
+| `simInsts` | `17,066,251` |
+| `numCycles` | `138,055,892` |
+| `CPI` | `8.089394` |
+| `IPC` | `0.123619` |
 | `D-cache miss rate` | `0.114745` |
 | `I-cache miss rate` | `0.000046` |
 

@@ -310,16 +310,16 @@
                         "name": "workload",
                         "path": "system.cpu.workload",
                         "cmd": [
-                            "/workspace/part2/main"
+                            "/workspace/ca_final_project/part2/main"
                         ],
-                        "cwd": "/workspace/part2",
+                        "cwd": "/workspace/ca_final_project/part2",
                         "drivers": [],
                         "egid": 100,
                         "env": [],
                         "errout": "cerr",
                         "euid": 100,
                         "eventq_index": 0,
-                        "executable": "/workspace/part2/main",
+                        "executable": "/workspace/ca_final_project/part2/main",
                         "gid": 0,
                         "input": "cin",
                         "kvmInSE": false,

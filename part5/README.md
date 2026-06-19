@@ -9,13 +9,10 @@ Part 5 is the multi-pattern GPU extension of the Part 4 pipeline:
 
 The key difference from Part 4 is that Part 5 processes multiple independent OFDM input patterns in one GPU launch sequence.
 
-The current implementation has already been built and run in the CUDA container with:
+Default logs are kept in:
 
-- `NUM_PATTERNS = 16`
-- `Verification = PASS`
-- default logs saved in:
-  - [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
-  - [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
+- [results/default_gpu_run.txt](/home/york/ca_final_project/part5/results/default_gpu_run.txt)
+- [results/default_cpu_run.txt](/home/york/ca_final_project/part5/results/default_cpu_run.txt)
 
 ## Problem and Goal
 

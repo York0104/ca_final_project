@@ -264,10 +264,10 @@ Part 1 gem5 baseline 結果如下：
 | Metric | Scalar Part 1 |
 | --- | --- |
 | `simSeconds` | 0.069028 |
-| `simInsts` | 17,066,142 |
-| `numCycles` | 138,056,924 |
-| `CPI` | 8.089506 |
-| `IPC` | 0.123617 |
+| `simInsts` | 17,066,251 |
+| `numCycles` | 138,055,892 |
+| `CPI` | 8.089394 |
+| `IPC` | 0.123619 |
 | `D-cache miss rate` | 0.114745 |
 | `I-cache miss rate` | 0.000046 |
 
@@ -325,11 +325,11 @@ Part 2 gem5 結果如下：
 
 | Metric | Part 2 RVV |
 | --- | --- |
-| `simSeconds` | 0.054827 |
-| `simInsts` | 11,395,259 |
-| `numCycles` | 109,653,580 |
-| `CPI` | 9.622709 |
-| `IPC` | 0.103921 |
+| `simSeconds` | 0.054755 |
+| `simInsts` | 11,395,368 |
+| `numCycles` | 109,510,852 |
+| `CPI` | 9.610092 |
+| `IPC` | 0.104057 |
 | `D-cache miss rate` | 0.170969 |
 | `I-cache miss rate` | 0.000071 |
 
@@ -376,36 +376,65 @@ Part 3 gem5 結果如下：
 
 | Metric | Part 3 SIMD-like RVV |
 | --- | --- |
-| `simSeconds` | 0.072715 |
-| `simInsts` | 11,208,742 |
-| `numCycles` | 145,430,124 |
-| `CPI` | 12.974667 |
-| `IPC` | 0.077073 |
-| `D-cache miss rate` | 0.229839 |
+| `simSeconds` | 0.072706 |
+| `simInsts` | 11,208,851 |
+| `numCycles` | 145,412,866 |
+| `CPI` | 12.973001 |
+| `IPC` | 0.077083 |
+| `D-cache miss rate` | 0.229838 |
 | `I-cache miss rate` | 0.000051 |
 
-Part 3 的 `simInsts` 低於 Part 1，但 `numCycles` 與 `simSeconds` 反而更高。這表示 instruction reduction 並沒有直接轉換成 cycle reduction。主要原因是 Stage 1 的 `vlse32.v` strided access 破壞 spatial locality，使 D-cache miss rate 升高到 `0.229839`，進而拉高 CPI。
+Part 3 的 `simInsts` 低於 Part 1，但 `numCycles` 與 `simSeconds` 反而更高。這表示 instruction reduction 並沒有直接轉換成 cycle reduction。主要原因是 Stage 1 的 `vlse32.v` strided access 破壞 spatial locality，使 D-cache miss rate 升高到 `0.229838`，進而拉高 CPI。
+
+這個結果不代表 Part 3 寫錯。依照題目在 `CA_Final_Project.pdf` 的要求，Part 3 本來就必須採用 across-`k` SIMD-like mapping、不可使用 reduction，且需要 strided memory access。對目前的資料布局
+
+```text
+pilot_index(k, p) = k * NUM_PILOTS + p
+```
+
+來說，固定 `p`、同時處理多個 `k` 時，Stage 1 的 byte stride 會是：
+
+```text
+NUM_PILOTS * sizeof(float) = 256 * 4 = 1024 bytes
+```
+
+這使得 Part 3 天生比 Part 2 更不利於 cache locality。Part 2 的 reduction path 可以沿著 contiguous pilot dimension `p` 使用 unit-stride load 與 `vfredusum.vs`，而 Part 3 為了符合 no-reduction 題意，必須承擔 strided load 的代價。
+
+這個判斷可以直接對應兩份 reference：
+
+- `reference/CA_Final_Project.pdf`
+  - Part 3 明確要求 `Do NOT use Vector Reduction Operations`
+  - 明確指出 `Strided memory access will be required`
+  - 並以 `vlse32.v`、`vsse32.v` 作為例子
+  - 同時要求比較 Part 1 / Part 2 / Part 3 的 simulation details，並思考為什麼 cycle reduction 與 instruction reduction 不完全相同
+- `reference/riscv-v-spec-1.0.pdf`
+  - `vle32.v` 是 unit-stride vector load
+  - `vlse32.v` 是 strided vector load，stride 以 byte 為單位
+
+因此可以形成完整的證據鏈：題目要求 Part 3 使用 SIMD-like across-`k` mapping 與 strided access；RVV spec 說明 `vlse32.v` 的語意本來就和 contiguous `vle32.v` 不同；而目前 gem5 stats 又顯示 Part 3 的 `D-cache miss rate = 0.229838`、`CPI = 12.973001`，所以即使 `simInsts` 下降，`numCycles` 與 `simSeconds` 仍可能上升。
+
+另外，當前 Part 3 的 Stage 1 會在每個 pilot iteration 中反覆讀寫 partial channel estimates `Hhat[k]`。這種寫法忠實保留了 Part 3 的 SIMD-like accumulation 形式，但也增加了 memory traffic。因此目前觀察到的結果是：instruction count 雖然下降，cache miss rate 與 CPI 卻明顯上升，最後總 cycles 沒有比 Part 1 更好。這正是 Part 3 題目希望比較的 architectural tradeoff，而不是實作錯誤。
 
 ## 8. Part 1～Part 3 gem5 正式比較
 
 | Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
 | --- | --- | --- | --- |
-| `simSeconds` | 0.069028 | 0.054827 | 0.072715 |
-| `simInsts` | 17,066,142 | 11,395,259 | 11,208,742 |
-| `numCycles` | 138,056,924 | 109,653,580 | 145,430,124 |
-| `CPI` | 8.089506 | 9.622709 | 12.974667 |
-| `IPC` | 0.123617 | 0.103921 | 0.077073 |
-| `D-cache miss rate` | 0.114745 | 0.170969 | 0.229839 |
+| `simSeconds` | 0.069028 | 0.054755 | 0.072706 |
+| `simInsts` | 17,066,251 | 11,395,368 | 11,208,851 |
+| `numCycles` | 138,055,892 | 109,510,852 | 145,412,866 |
+| `CPI` | 8.089394 | 9.610092 | 12.973001 |
+| `IPC` | 0.123619 | 0.104057 | 0.077083 |
+| `D-cache miss rate` | 0.114745 | 0.170969 | 0.229838 |
 | `I-cache miss rate` | 0.000046 | 0.000071 | 0.000051 |
 
 從目前 gem5 結果來看：
 
 - Part 2 是 Part 1～Part 3 中最快的版本
 - Part 2 相較 Part 1：
-  - `simSeconds` 約下降 `20.57%`
-  - `numCycles` 約下降 `20.57%`
+  - `simSeconds` 約下降 `20.68%`
+  - `numCycles` 約下降 `20.68%`
   - `simInsts` 約下降 `33.23%`
-- Part 3 雖然也降低了 instruction count，但 strided memory access 讓 cache behavior 惡化，最後 `simSeconds` 反而比 Part 1 高約 `5.34%`
+- Part 3 雖然也降低了 instruction count，但 strided memory access 讓 cache behavior 惡化，最後 `simSeconds` 反而比 Part 1 高約 `5.33%`
 
 這組比較剛好對應作業想看的重點：不同 parallel mapping 不只影響 instruction count，也會改變 memory behavior 與 CPI，因此不能只用「指令變少」來推論「一定更快」。
 
@@ -442,8 +471,8 @@ Part 4 的 shared-vs-serial Stage 1 比較如下：
 
 | Case | LS Mode | LS ms | Pipeline ms | Verification |
 | --- | --- | --- | --- | --- |
-| `ls_shared_256` | `shared` | 0.018898 | 0.055716 | PASS |
-| `ls_serial_256` | `serial` | 0.125585 | 0.118239 | PASS |
+| `ls_shared_256` | `shared` | 0.017372 | 0.043345 | PASS |
+| `ls_serial_256` | `serial` | 0.135022 | 0.118535 | PASS |
 
 這裡的 timing gap 應解讀為：
 
@@ -458,23 +487,23 @@ Part 4 的 TPB sweep 摘要如下：
 
 | Case | TPB_LS | TPB_EQ | LS Mode | LS ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- |
-| `ls_shared_64` | 64 | 256 | shared | 0.016634 | 0.040935 |
-| `ls_shared_128` | 128 | 256 | shared | 0.018294 | 0.043430 |
-| `ls_shared_256` | 256 | 256 | shared | 0.018898 | 0.055716 |
+| `ls_shared_64` | 64 | 256 | shared | 0.017032 | 0.040740 |
+| `ls_shared_128` | 128 | 256 | shared | 0.015666 | 0.039000 |
+| `ls_shared_256` | 256 | 256 | shared | 0.017372 | 0.043345 |
 
 ### LMMSE kernel sweep
 
 | Case | TPB_LS | TPB_EQ | LS Mode | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- |
-| `eq_shared_128` | 256 | 128 | shared | 0.022324 | 0.048579 |
-| `eq_shared_256` | 256 | 256 | shared | 0.017079 | 0.046890 |
-| `eq_shared_512` | 256 | 512 | shared | 0.019672 | 0.041944 |
+| `eq_shared_128` | 256 | 128 | shared | 0.021142 | 0.062669 |
+| `eq_shared_256` | 256 | 256 | shared | 0.024146 | 0.044678 |
+| `eq_shared_512` | 256 | 512 | shared | 0.021271 | 0.034696 |
 
 這些結果說明：
 
 - `TPB_LS` 與 `TPB_EQ` 都不是越大越快
 - 單看 LS kernel 與看整體 pipeline，不一定會得到相同的最佳設定
-- 在目前量測中，`TPB_LS=64` 的 pipeline kernel-only time 最低，`TPB_EQ=512` 的 pipeline kernel-only time 也最低
+- 在目前量測中，`TPB_LS=128` 的 pipeline kernel-only time 最低，`TPB_EQ=512` 的 pipeline kernel-only time 也最低
 
 Nsight Compute 與 PTXAS 證據則顯示：
 
@@ -505,16 +534,16 @@ Part 5 的主要映射為：
 | `H_MSE` | 0.00001289 |
 | `MSE_RX_BEFORE_EQ` | 0.14082038 |
 | `MSE_LMMSE` | 0.00682142 |
-| `LS_KERNEL_MS` | 0.161546 |
-| `LMMSE_KERNEL_MS` | 0.282593 |
-| `PIPELINE_KERNEL_MS` | 0.346563 |
+| `LS_KERNEL_MS` | 0.128993 |
+| `LMMSE_KERNEL_MS` | 0.308572 |
+| `PIPELINE_KERNEL_MS` | 0.434780 |
 | Verification | PASS |
 
 同一份 multi-pattern input 的 CPU baseline 結果如下：
 
 | Metric | Value |
 | --- | --- |
-| `CPU_PIPELINE_MS` | 10.517579 |
+| `CPU_PIPELINE_MS` | 12.268151 |
 | `H_MSE` | 0.00001289 |
 | `MSE_LMMSE` | 0.00682142 |
 | `Verification` | PASS |
@@ -525,11 +554,11 @@ Part 5 pattern sweep 摘要如下：
 
 | Patterns | Verification | LS ms | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- |
-| 1 | PASS | 0.015764 | 0.016374 | 0.051354 |
-| 4 | PASS | 0.028692 | 0.069693 | 0.103526 |
-| 8 | PASS | 0.065505 | 0.129188 | 0.206428 |
-| 16 | PASS | 0.098575 | 0.266102 | 0.346112 |
-| 32 | PASS | 0.141276 | 0.526899 | 0.681580 |
+| 1 | PASS | 0.032481 | 0.037750 | 0.069048 |
+| 4 | PASS | 0.039578 | 0.117176 | 0.141583 |
+| 8 | PASS | 0.059996 | 0.177853 | 0.214241 |
+| 16 | PASS | 0.086354 | 0.347571 | 0.404536 |
+| 32 | PASS | 0.223770 | 0.745861 | 0.926991 |
 
 這組結果不應只看總時間，而要看 pattern-level amortization。隨著 patterns 增加，GPU 看到更多獨立 blocks 與 warps，pipeline time per pattern 下降，這正是 Part 5 想展示的架構重點。
 

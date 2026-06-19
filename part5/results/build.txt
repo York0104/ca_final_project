@@ -1,4 +1,7 @@
+make[1]: Entering directory '/workspace/ca_final_project/part5'
 rm -f main main_cpu generate_ofdm_multi main.ptx
+make[1]: Leaving directory '/workspace/ca_final_project/part5'
+make[1]: Entering directory '/workspace/ca_final_project/part5'
 g++ -O2 -std=c++17 generate_ofdm_multi.cpp -o generate_ofdm_multi
 mkdir -p ../data
 ./generate_ofdm_multi ../data/ofdm_input_multi.bin 16
@@ -19,3 +22,4 @@ ptxas info    : Function properties for _Z34ls_channel_estimation_multi_kernelPK
     0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
 ptxas info    : Used 15 registers, 392 bytes cmem[0]
 g++ -O2 -std=c++17 main_cpu.cpp -o main_cpu
+make[1]: Leaving directory '/workspace/ca_final_project/part5'

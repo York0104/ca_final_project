@@ -68,38 +68,59 @@ Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
 
 ## Build and Run
 
+All commands below assume you start from the repository root:
+
+```bash
+cd /home/york/ca_final_project
+```
+
+### Environment Requirements
+
+For `Part 1` to `Part 3` you need:
+
+- Docker with the gem5 / RVV image from the course material, or an equivalent environment that provides:
+  - `g++`
+  - `riscv64-linux-gnu-g++`
+  - gem5 at `/root/gem5/build/RISCV/gem5.opt`
+
+For `Part 4` and `Part 5` you need:
+
+- an NVIDIA GPU with a CUDA-capable driver
+- Docker with the CUDA image from the course material, or an equivalent environment that provides:
+  - `nvcc`
+  - `ncu`
+  - GPU access inside the container
+
+The checked-in Markdown files summarize the current saved runs in this repository, but rebuilding and rerunning still requires the environments above.
+
 ### Part 1
 
 Host correctness check:
 
 ```bash
-cd part1
-make clean
-make host
+make -C part1 clean
+make -C part1 host
 ```
 
 gem5 run:
 
 ```bash
-cd part1
-make clean
-make
+make -C part1 clean
+make -C part1
 ```
 
 ### Part 2
 
 ```bash
-cd part2
-make clean
-make
+make -C part2 clean
+make -C part2
 ```
 
 ### Part 3
 
 ```bash
-cd part3
-make clean
-make
+make -C part3 clean
+make -C part3
 ```
 
 Each `make` run:
@@ -109,39 +130,82 @@ Each `make` run:
 - runs gem5 with `TimingSimpleCPU`
 - prints key stats from `m5out/stats.txt`
 
+Current gem5 output directories:
+
+- `part1/m5out/`
+- `part2/m5out/`
+- `part3/m5out/`
+
 ### Part 4
 
 ```bash
-cd part4
-make
-make run
+make -C part4 clean
+make -C part4
+make -C part4 run
 ```
+
+Extra commands:
+
+```bash
+make -C part4 ptx
+make -C part4 profile
+make -C part4 sweep
+```
+
+Current Part 4 result directory:
+
+- `part4/results/`
 
 ### Part 5
 
 ```bash
-cd part5
-make
-make run
+make -C part5 clean
+make -C part5
+make -C part5 run
 ```
 
 Optional CPU baseline:
 
 ```bash
-cd part5
-make run_cpu
+make -C part5 run_cpu
 ```
+
+Extra commands:
+
+```bash
+make -C part5 ptx
+make -C part5 profile
+make -C part5 sweep
+```
+
+Current Part 5 result directory:
+
+- `part5/results/`
+
+## Cleaning Old Results
+
+Remove build outputs and regenerateable logs:
+
+```bash
+make -C part1 clean
+make -C part2 clean
+make -C part3 clean
+make -C part4 clean
+make -C part5 clean
+```
+
+The checked-in `m5out/` and `results/` folders contain the current saved measured outputs. They are report artifacts, not source code.
 
 ## gem5 Results
 
 | Metric | Part 1 | Part 2 | Part 3 |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.069028` | `0.054827` | `0.072715` |
-| `simInsts` | `17,066,142` | `11,395,259` | `11,208,742` |
-| `numCycles` | `138,056,924` | `109,653,580` | `145,430,124` |
-| `CPI` | `8.089506` | `9.622709` | `12.974667` |
-| `IPC` | `0.123617` | `0.103921` | `0.077073` |
-| `D-cache miss rate` | `0.114745` | `0.170969` | `0.229839` |
+| `simSeconds` | `0.069028` | `0.054755` | `0.072706` |
+| `simInsts` | `17,066,251` | `11,395,368` | `11,208,851` |
+| `numCycles` | `138,055,892` | `109,510,852` | `145,412,866` |
+| `CPI` | `8.089394` | `9.610092` | `12.973001` |
+| `IPC` | `0.123619` | `0.104057` | `0.077083` |
+| `D-cache miss rate` | `0.114745` | `0.170969` | `0.229838` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
 
 Interpretation:
@@ -163,6 +227,10 @@ The shared validation checks:
 - `MSE_RX_BEFORE_EQ`
 - `MSE_LMMSE`
 - `checksum`
+
+For `Part 1` to `Part 3`, these values are printed by the executable itself and recorded in the checked-in Markdown summaries.
+
+For `Part 4` and `Part 5`, the checked-in `results/*_run.txt` logs and the 2026-06-19 rerun copies under `rerun_outputs/` both include the same functional checks together with GPU timing output.
 
 ## Environment Notes
 
@@ -194,4 +262,33 @@ Note:
 - The project container uses `CUDA Toolkit 12.4.1`
 - This combination is working correctly in the current environment
 
-No extra CUDA setup is needed before running `Part 4` or `Part 5`.
+## Result Files and Figures
+
+Primary report-facing artifacts in the repository:
+
+- `Overall_Results_Analysis.md`
+- `part1/Part1_MMSE.md`
+- `part2/Part2_RVV_Reduction.md`
+- `part3/Part3_SIMD_Like_RVV.md`
+- `part4/Part4_CUDA_SIMT.md`
+- `part5/Part5_Multi_Pattern_GPU.md`
+- `report.md`
+
+Saved raw outputs:
+
+- gem5 stats: `part1/m5out/stats.txt`, `part2/m5out/stats.txt`, `part3/m5out/stats.txt`
+- CUDA run logs: `part4/results/*_run.txt`, `part5/results/*_run.txt`
+- PTXAS / PTX / NCU: `part4/results/`, `part5/results/`
+
+Generated figures:
+
+- `figures/fig_part123_numcycles.svg`
+- `figures/fig_part123_dcache_miss.svg`
+- `figures/fig_part4_tpb_sweep.svg`
+- `figures/fig_part5_pattern_scaling.svg`
+
+Figure regeneration script:
+
+```bash
+python3 tools/generate_figures.py
+```

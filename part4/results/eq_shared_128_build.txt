@@ -1,4 +1,7 @@
+make[1]: Entering directory '/workspace/ca_final_project/part4'
 rm -f main main.ptx ../data_gen/generate_ofdm_data
+make[1]: Leaving directory '/workspace/ca_final_project/part4'
+make[1]: Entering directory '/workspace/ca_final_project/part4'
 g++ -O2 -std=c++11 ../data_gen/generate_ofdm_data.cpp -o ../data_gen/generate_ofdm_data
 mkdir -p ../data
 ../data_gen/generate_ofdm_data ../data/ofdm_input.bin
@@ -21,3 +24,4 @@ ptxas info    : Compiling entry function '_Z35ls_channel_estimation_shared_kerne
 ptxas info    : Function properties for _Z35ls_channel_estimation_shared_kernelPKfS0_S0_PfS1_
     0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
 ptxas info    : Used 14 registers, 392 bytes cmem[0]
+make[1]: Leaving directory '/workspace/ca_final_project/part4'

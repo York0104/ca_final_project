@@ -1,6 +1,5 @@
 # CA Final Project Part 3
 
-## Scope
 
 Part 3 keeps the same OFDM workload and changes the Stage 1 mapping:
 
@@ -38,13 +37,13 @@ The main difference from Part 2 is the Stage 1 mapping.
 
 ### SIMD-like RVV LS Channel Estimation
 
-數學形式仍然是：
+數學形式仍是：
 
 ```text
 Hhat[k] = sum_p Y_pilot[p,k] * w[p]
 ```
 
-但 Part 3 的實作重點是：
+但 Part 3 的實作差異：
 
 - 不使用 vector reduction
 - 每個 vector lane 對應不同的輸出 subcarrier `k`
@@ -56,13 +55,9 @@ Hhat[k] = sum_p Y_pilot[p,k] * w[p]
 ### CA mapping
 
 ```text
-vector lanes -> different output subcarriers k
-no reduction
+vector lanes -> different output subcarriers k no reduction
 strided access -> vlse32.v
 ```
-
-This stage uses SIMD-like RVV lanes, keeps one partial sum per lane, and relies on strided access instead of vector reduction.
-
 ---
 
 ## Computation Stage 2
@@ -72,8 +67,7 @@ This stage uses SIMD-like RVV lanes, keeps one partial sum per lane, and relies 
 Part 3 的第二段與 Part 2 相同：
 
 ```text
-Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k])
-             / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
+Xmmse[s,k] = Ydata[s,k] * conj(Hhat[k]) / (|Hhat[k]|^2 + NOISE_VAR_OVER_SYMBOL_POWER + EPSILON)
 ```
 
 這段沿著 subcarrier `k` 做 unit-stride RVV vectorization。
@@ -114,8 +108,6 @@ Part 3 與 Part 1 / Part 2 相同，只保留：
 
 The printed checks are the same ones used in Parts 1 and 2.
 
-而不被額外的 ZF comparison 分散。
-
 ---
 
 ## 結果紀錄
@@ -139,16 +131,16 @@ The printed checks are the same ones used in Parts 1 and 2.
 
 | Metric | Part 3 SIMD-like RVV |
 | --- | --- |
-| `simSeconds` | `0.072715` |
-| `simTicks` | `72,715,062,000` |
-| `hostSeconds` | `26.86` |
-| `simInsts` | `11,208,742` |
-| `simOps` | `11,438,155` |
-| `numCycles` | `145,430,124` |
-| `CPI` | `12.974667` |
-| `IPC` | `0.077073` |
-| `D-cache misses` | `790,640` |
-| `D-cache miss rate` | `0.229839` |
+| `simSeconds` | `0.072706` |
+| `simTicks` | `72,706,433,000` |
+| `hostSeconds` | `23.37` |
+| `simInsts` | `11,208,851` |
+| `simOps` | `11,438,264` |
+| `numCycles` | `145,412,866` |
+| `CPI` | `12.973001` |
+| `IPC` | `0.077083` |
+| `D-cache misses` | `790,639` |
+| `D-cache miss rate` | `0.229838` |
 | `I-cache misses` | `907` |
 | `I-cache miss rate` | `0.000051` |
 
@@ -156,16 +148,10 @@ The printed checks are the same ones used in Parts 1 and 2.
 
 | Metric | Part 1 Scalar | Part 2 RVV | Part 3 SIMD-like RVV |
 | --- | --- | --- | --- |
-| `simSeconds` | `0.069028` | `0.054827` | `0.072715` |
-| `simInsts` | `17,066,142` | `11,395,259` | `11,208,742` |
-| `numCycles` | `138,056,924` | `109,653,580` | `145,430,124` |
-| `CPI` | `8.089506` | `9.622709` | `12.974667` |
-| `IPC` | `0.123617` | `0.103921` | `0.077073` |
-| `D-cache miss rate` | `0.114745` | `0.170969` | `0.229839` |
+| `simSeconds` | `0.069028` | `0.054755` | `0.072706` |
+| `simInsts` | `17,066,251` | `11,395,368` | `11,208,851` |
+| `numCycles` | `138,055,892` | `109,510,852` | `145,412,866` |
+| `CPI` | `8.089394` | `9.610092` | `12.973001` |
+| `IPC` | `0.123619` | `0.104057` | `0.077083` |
+| `D-cache miss rate` | `0.114745` | `0.170969` | `0.229838` |
 | `I-cache miss rate` | `0.000046` | `0.000071` | `0.000051` |
-
-## Interpretation
-
-- `simInsts` drops relative to Part 1, but `simSeconds` and `numCycles` increase.
-- The Stage 1 `vlse32.v` pattern uses a `NUM_PILOTS * sizeof(float)` byte stride across `k`, so the cache behavior is worse than in Part 2.
-- The miss-rate increase is large enough to wipe out the benefit from the lower instruction count.
