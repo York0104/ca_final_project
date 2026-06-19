@@ -15,7 +15,7 @@ Current scope:
 - 不使用 multi-pattern batching
 - 不使用 2D grid
 
-Part 5 is still reserved for multi-pattern GPU parallelism.
+Part 5 is implemented separately in [`part5/`](/home/york/ca_final_project/part5) and is not part of this single-pattern CUDA file.
 
 At this stage, Part 4 already includes source code, build scripts, PTX/PTXAS materials, Nsight Compute output, TPB sweep logs, and a shared-vs-serial Stage 1 comparison.
 
@@ -213,19 +213,19 @@ Interpretation:
 
 | Case | TPB_LS | TPB_EQ | LS Mode | LS ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- |
-| `ls_shared_64` | `64` | `256` | `shared` | `0.017875` | `0.043228` |
-| `ls_shared_128` | `128` | `256` | `shared` | `0.017576` | `0.038370` |
-| `ls_shared_256` | `256` | `256` | `shared` | `0.018781` | `0.052552` |
+| `ls_shared_64` | `64` | `256` | `shared` | `0.016634` | `0.040935` |
+| `ls_shared_128` | `128` | `256` | `shared` | `0.018294` | `0.043430` |
+| `ls_shared_256` | `256` | `256` | `shared` | `0.018898` | `0.055716` |
 
-In this sweep, `TPB_LS=128` gives the lowest measured pipeline kernel-only time.
+In this sweep, `TPB_LS=64` gives the lowest measured pipeline kernel-only time.
 
 ### LMMSE kernel sweep
 
 | Case | TPB_LS | TPB_EQ | LS Mode | LMMSE ms | Pipeline ms |
 | --- | --- | --- | --- | --- | --- |
-| `eq_shared_128` | `256` | `128` | `shared` | `0.023600` | `0.055852` |
-| `eq_shared_256` | `256` | `256` | `shared` | `0.037985` | `0.069458` |
-| `eq_shared_512` | `256` | `512` | `shared` | `0.021407` | `0.043108` |
+| `eq_shared_128` | `256` | `128` | `shared` | `0.022324` | `0.048579` |
+| `eq_shared_256` | `256` | `256` | `shared` | `0.017079` | `0.046890` |
+| `eq_shared_512` | `256` | `512` | `shared` | `0.019672` | `0.041944` |
 
 In this sweep, `TPB_EQ=512` gives the lowest measured pipeline kernel-only time.
 
@@ -233,8 +233,8 @@ In this sweep, `TPB_EQ=512` gives the lowest measured pipeline kernel-only time.
 
 | Case | LS Mode | LS ms | Pipeline ms | Verification |
 | --- | --- | --- | --- | --- |
-| `ls_shared_256` | `shared` | `0.018781` | `0.052552` | `PASS` |
-| `ls_serial_256` | `serial` | `0.136742` | `0.133509` | `PASS` |
+| `ls_shared_256` | `shared` | `0.018898` | `0.055716` | `PASS` |
+| `ls_serial_256` | `serial` | `0.125585` | `0.118239` | `PASS` |
 
 ## Shared vs Serial Interpretation
 
@@ -259,4 +259,3 @@ Items still left for later work:
 
 - broader TPB exploration
 - a more polished NCU write-up
-- Part 5 multi-pattern 2D grid mapping

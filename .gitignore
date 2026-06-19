@@ -4,17 +4,17 @@ main_host
 *.o
 *.out
 generate_ofdm_data
-part5/main
-part5/main_cpu
-part5/generate_ofdm_multi
+# part5/main
+# part5/main_cpu
+# part5/generate_ofdm_multi
 
 # gem5 outputs
-m5out/
-part1/m5out/
-part2/m5out/
-part3/m5out/
-part1_kernel_only/m5out/
-part2_kernel_only/m5out/
+# m5out/
+# part1/m5out/
+# part2/m5out/
+# part3/m5out/
+# part1_kernel_only/m5out/
+# part2_kernel_only/m5out/
 
 # Local generated stats or temp files
 *.log

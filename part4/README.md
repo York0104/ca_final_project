@@ -13,7 +13,7 @@ This part processes a single OFDM input pattern from:
 ../data/ofdm_input.bin
 ```
 
-It does not implement the multi-pattern batching used later in Part 5.
+It does not implement the multi-pattern batching used in [`part5/`](/home/york/ca_final_project/part5).
 
 This directory is meant to be self-contained for the single-pattern CUDA submission:
 
